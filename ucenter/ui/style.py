@@ -69,11 +69,19 @@ QPushButton:pressed { background: $border; }
 QPushButton:disabled { color: $muted; background: $window; }
 QPushButton[variant="primary"] { background: $accent; border-color: $accent; color: #FFFFFF; font-weight: 600; }
 QPushButton[variant="primary"]:hover { background: $accent_hover; border-color: $accent_hover; }
+QPushButton[variant="primary"]:disabled { background: $window; border-color: $border; color: $muted; font-weight: normal; }
 QPushButton[variant="danger"] { background: $card; border-color: $danger; color: $danger; font-weight: 600; }
 QPushButton[variant="danger"]:hover { background: $danger_soft; }
+QPushButton[variant="danger"]:disabled { background: $window; border-color: $border; color: $muted; font-weight: normal; }
 QPushButton#mapButton {
     padding: 0; min-height: 0; border-radius: 14px; font-size: 15px; font-weight: 600;
 }
+
+/* Плашка поверх карты */
+QFrame#mapOverlay { background: $card; border: 1px solid $border; border-radius: 8px; }
+QFrame#mapOverlay QLabel { background: transparent; }
+QFrame#popover { background: $card; border: 1px solid $border; border-radius: 10px; }
+QFrame#popover QLabel { background: transparent; }
 
 /* Поля ввода и списки */
 QComboBox, QLineEdit {
@@ -125,6 +133,17 @@ QScrollBar::handle:horizontal { background: $scroll; border-radius: 3px; min-wid
 QScrollBar::handle:hover { background: $muted; }
 QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
 QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+
+/* Таблицы */
+QTableView {
+    background: $card; border: 1px solid $border; border-radius: 6px; gridline-color: $border;
+    selection-background-color: $accent_soft; selection-color: $text;
+}
+QHeaderView::section {
+    background: $window; color: $muted; border: none; border-bottom: 1px solid $border;
+    padding: 4px 6px;
+}
+QTableCornerButton::section { background: $window; border: none; }
 
 /* Текстовые роли */
 QLabel[role="value"] { font-size: 14px; font-weight: 600; }

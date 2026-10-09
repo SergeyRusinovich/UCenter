@@ -1,7 +1,8 @@
-"""Загрузка тайлов OpenStreetMap: сеть, кэш в памяти и на диске, повторы с паузой."""
+"""Загрузка тайлов карты: сеть, кэш в памяти и на диске, повторы с паузой."""
 import os
 import time
 from collections import OrderedDict
+from dataclasses import dataclass
 
 from PyQt6.QtCore import QObject, QStandardPaths, QUrl, pyqtSignal
 from PyQt6.QtGui import QPixmap
@@ -9,12 +10,30 @@ from PyQt6.QtNetwork import (
     QNetworkAccessManager, QNetworkDiskCache, QNetworkRequest, QNetworkReply,
 )
 
-TILE_URL = "https://tile.openstreetmap.org/{key}.png"
-USER_AGENT = "UCenter/1.0 (desktop GNSS viewer)"  # требуется политикой тайл-сервера OSM
+from ucenter.ui.network import make_request
+
 MEMORY_TILES = 300
 MAX_PENDING = 64
 DISK_CACHE_BYTES = 200 * 1024 * 1024
 RETRY_MIN, RETRY_MAX = 10.0, 300.0  # секунд до повтора неудачного тайла (растёт вдвое)
+
+
+@dataclass(frozen=True)
+class TileSource:
+    url: str          # шаблон с {z}, {x}, {y}
+    attribution: str
+    cache_dir: str    # подкаталог дискового кэша
+
+
+OSM = TileSource("https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                 "© OpenStreetMap contributors", "osm-tiles")
+ESRI_IMAGERY = TileSource(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    "Imagery © Esri, Maxar, Earthstar Geographics", "esri-imagery")
+# Запасной вариант там, где Esri недоступен. Прямой доступ к тайлам Google не разрешён
+# условиями Google Maps Platform: только для личного/внутреннего использования.
+GOOGLE_IMAGERY = TileSource("https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+                            "Imagery © Google", "google-imagery")
 
 
 class TileLoader(QObject):
@@ -22,8 +41,9 @@ class TileLoader(QObject):
 
     tile_loaded = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, source: TileSource = OSM, parent=None):
         super().__init__(parent)
+        self.source = source
         self._cache: OrderedDict[str, QPixmap] = OrderedDict()
         self._pending: set[str] = set()
         self._failed: dict[str, tuple[float, float]] = {}  # тайл -> (время повтора, пауза)
@@ -32,7 +52,7 @@ class TileLoader(QObject):
         # Дисковый кэш: тайлы переживают перезапуск, как требует политика OSM
         disk = QNetworkDiskCache(self)
         base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.CacheLocation)
-        disk.setCacheDirectory(os.path.join(base, "osm-tiles"))
+        disk.setCacheDirectory(os.path.join(base, source.cache_dir))
         disk.setMaximumCacheSize(DISK_CACHE_BYTES)
         self._nam.setCache(disk)
         self._nam.setRedirectPolicy(QNetworkRequest.RedirectPolicy.NoLessSafeRedirectPolicy)
@@ -53,8 +73,8 @@ class TileLoader(QObject):
 
     def _request(self, key: str):
         self._pending.add(key)
-        req = QNetworkRequest(QUrl(TILE_URL.format(key=key)))
-        req.setHeader(QNetworkRequest.KnownHeaders.UserAgentHeader, USER_AGENT)
+        z, x, y = key.split("/")
+        req = make_request(QUrl(self.source.url.format(z=z, x=x, y=y)))
         req.setAttribute(QNetworkRequest.Attribute.CacheLoadControlAttribute,
                          QNetworkRequest.CacheLoadControl.PreferCache)
         req.setAttribute(QNetworkRequest.Attribute.User, key)

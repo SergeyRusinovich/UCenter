@@ -8,3 +8,6 @@ venv/
 .vscode/
 .idea/
 .DS_Store
+
+# macOS app wrapper (tools/make_macos_app.sh)
+UCenter.app/

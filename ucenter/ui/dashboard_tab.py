@@ -1,6 +1,6 @@
 """Вкладка Dashboard: данные навигации, поправка UTC, компас и карта."""
 from PyQt6.QtWidgets import (
-    QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QLabel, QGroupBox, QComboBox,
+    QWidget, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QComboBox,
 )
 
 from ucenter.core.navigation import NavData

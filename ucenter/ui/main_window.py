@@ -6,6 +6,7 @@ from ucenter.core.navigation import NavigationState
 from ucenter.core.ports import find_ports
 from ucenter.core.satellites import SatelliteTracker
 from ucenter.core.session import ReceiverSession
+from ucenter.ui.azimuth_tab import AzimuthTab
 from ucenter.ui.config_tab import ConfigTab
 from ucenter.ui.connection_panel import ConnectionPanel
 from ucenter.ui.console_tab import ConsoleTab
@@ -32,6 +33,7 @@ class MainWindow(QMainWindow):
         self.console_tab = ConsoleTab()
         self.dashboard_tab = DashboardTab()
         self.satellites_tab = SatellitesTab()
+        self.azimuth_tab = AzimuthTab()
         self.config_tab = ConfigTab()
         self._build_layout()
         self._wire()
@@ -49,6 +51,7 @@ class MainWindow(QMainWindow):
         for widget, title in ((self.console_tab, "Console"),
                               (self.dashboard_tab, "Dashboard"),
                               (self.satellites_tab, "Satellites"),
+                              (self.azimuth_tab, "Azimuth"),
                               (self.config_tab, "Configuration")):
             self.tabs.addTab(widget, title)
         root.addWidget(self.tabs)
@@ -61,6 +64,7 @@ class MainWindow(QMainWindow):
         self.config_tab.valset_requested.connect(s.apply_config)
         self.config_tab.refresh_requested.connect(s.poll_config)
         s.connected_changed.connect(self.connection.set_connected)
+        self.azimuth_tab.expand_changed.connect(lambda on: self.connection.setVisible(not on))
         s.connected_changed.connect(self.config_tab.set_connected)
         s.message.connect(self._on_message)
         s.config_values.connect(self.config_tab.apply_values)
