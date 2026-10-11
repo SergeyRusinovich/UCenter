@@ -1,18 +1,9 @@
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
+# Build
+build/
+build-*/
+CMakeUserPresets.json
 
 # IDE / OS
 .vscode/
 .idea/
 .DS_Store
-
-# macOS app wrapper (tools/make_macos_app.sh)
-UCenter.app/
-
-# C++ build
-build/
-build-*/
-CMakeUserPresets.json
