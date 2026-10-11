@@ -1,7 +1,6 @@
 #include "core/navigation.h"
 
 #include "core/timeutil.h"
-#include "core/ubx.h"
 
 #include <QHash>
 

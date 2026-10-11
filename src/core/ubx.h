@@ -28,7 +28,6 @@ inline constexpr quint8 PollLayerRam = 0;
 
 using ConfigItems = QList<std::pair<quint32, quint64>>;  // ключ, значение
 
-bool isUbx(const QByteArray &raw);
 // Контрольная сумма Флетчера по классу, id, длине и нагрузке
 std::pair<quint8, quint8> checksum(const QByteArray &data);
 QByteArray frame(quint8 cls, quint8 id, const QByteArray &payload);
