@@ -175,10 +175,23 @@ include(CPack)
 
 # ---------- Тесты ----------
 enable_testing()
+# Эталонная запись для замеров (дорожная карта, фаза 1): генератор, а не файл в репозитории
+add_library(ucenter_recording STATIC tests/recording.cpp)
+target_link_libraries(ucenter_recording PUBLIC ucenter_core)
+ucenter_warnings(ucenter_recording)
+
 qt_add_executable(test_core tests/test_core.cpp)
-target_link_libraries(test_core PRIVATE ucenter_core Qt6::Test)
+target_link_libraries(test_core PRIVATE ucenter_core ucenter_recording Qt6::Test)
 ucenter_warnings(test_core)
 add_test(NAME test_core COMMAND test_core)
+
+# Замеры ядра и файл эталонной записи для приложения; в ctest не входят — запускаются вручную
+qt_add_executable(bench_core tests/bench_core.cpp)
+target_link_libraries(bench_core PRIVATE ucenter_recording Qt6::Test)
+ucenter_warnings(bench_core)
+qt_add_executable(make_recording tests/make_recording.cpp)
+target_link_libraries(make_recording PRIVATE ucenter_recording)
+ucenter_warnings(make_recording)
 
 # Все строки всех языков переведены (нет «unfinished» в .ts)
 add_test(NAME translations_complete

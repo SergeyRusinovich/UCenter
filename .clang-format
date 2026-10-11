@@ -32,3 +32,5 @@ SortIncludes: CaseSensitive
 SpacesBeforeTrailingComments: 2
 FixNamespaceComments: true
 ShortNamespaceLines: 0
+# QBENCHMARK { ... } — как цикл: скобка на той же строке
+ForEachMacros: [foreach, Q_FOREACH, QBENCHMARK, QBENCHMARK_ONCE]

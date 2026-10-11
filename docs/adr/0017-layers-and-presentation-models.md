@@ -34,4 +34,4 @@ The app keeps four layers with dependencies pointing down only:
 - No restructuring is needed; the existing split is the layered architecture, now documented with names.
 - New screen logic goes into a presentation model in the core, with a test, before the widget that shows it — as 0004 already asks.
 - If a QML interface is ever built, the presentation models become its view models by adding `Q_PROPERTY` declarations and change signals; the domain and infrastructure stay as they are.
-- The next step in this direction — one model per receiver that runs in the reader thread — is proposed in [0018](0018-receiver-model-in-reader-thread.md).
+- A further step — one model per receiver running in the reader thread — was proposed in [0018](0018-receiver-model-in-reader-thread.md) and rejected after measurement: the models are too cheap for it to matter.

@@ -139,6 +139,17 @@ void MainWindow::wire()
     m_configTab->setConnected(false);
 }
 
+void MainWindow::startReplay(const QString &path, double speed, bool quitAtEnd)
+{
+    if (quitAtEnd)
+        connect(m_session, &ReceiverSession::connectedChanged, qApp, [](bool on) {
+            if (!on)
+                QCoreApplication::quit();
+        });
+    m_connection->setBusy();
+    m_session->openReplay(path, speed);
+}
+
 void MainWindow::connectPort(const QString &port, int baudrate)
 {
     m_connection->setBusy();

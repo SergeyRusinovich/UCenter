@@ -21,7 +21,7 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0015 | [The language is chosen in a drop-down list; the system language is not used](0015-explicit-language-choice.md) | Accepted |
 | 0016 | [On Windows the app sets an organization name for QSettings](0016-windows-organization-name.md) | Accepted |
 | 0017 | [Layered architecture with presentation models in the core; no MVVM, no QML](0017-layers-and-presentation-models.md) | Accepted |
-| 0018 | [Navigation and satellite models run in the reader thread and publish snapshots](0018-receiver-model-in-reader-thread.md) | Proposed |
+| 0018 | [Navigation and satellite models run in the reader thread and publish snapshots](0018-receiver-model-in-reader-thread.md) | Rejected after measurement |
 
 ## Writing a new record
 

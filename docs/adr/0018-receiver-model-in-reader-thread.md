@@ -1,6 +1,6 @@
 # 0018. Navigation and satellite models run in the reader thread and publish snapshots
 
-- **Status:** Proposed
+- **Status:** Rejected after measurement (see Outcome)
 - **Date:** 2026-10-11
 
 ## Context
@@ -30,3 +30,7 @@ At 10 Hz with NMEA and UBX both enabled this is hundreds of signal calls and mod
 - `ReceiverModel` is tested headless, like the other core classes; `test_session` checks that snapshots arrive and are throttled.
 - The models are touched from one thread only, the reader thread; snapshots are copied across threads, so `NavData` and `SatelliteSnapshot` must stay plain value types.
 - Before acceptance, the GUI-thread load is measured on a 10 Hz recording, so the change can be verified rather than assumed (see the [roadmap](../roadmap.md)).
+
+## Outcome
+
+Rejected on 2026-10-11, after the baseline measurements of the [roadmap](../roadmap.md#baseline-measurements). On the reference 10 Hz stream with every message enabled, the navigation and satellite models take about 2 µs per epoch together, and message handling plus console text formatting do not show up in the profile of the GUI thread at all; the whole 10-minute recording is processed in 0.7 s of CPU at maximum replay speed. The GUI thread is busy painting: the map on Dashboard and the text of the console. Moving the models would add a thread boundary and change ownership for no measurable gain, so the work goes into painting instead (roadmap phase 2). `MainWindow` keeps the models; the concern about it owning state is noted but not worth a restructuring on its own.
