@@ -289,11 +289,6 @@ QString describeValget(const GnssMessage &msg, const Valget &v)
 
 }  // namespace
 
-bool isUbx(const QByteArray &raw)
-{
-    return raw.size() >= 2 && quint8(raw[0]) == Sync1 && quint8(raw[1]) == Sync2;
-}
-
 std::pair<quint8, quint8> checksum(const QByteArray &data)
 {
     quint8 a = 0, b = 0;
