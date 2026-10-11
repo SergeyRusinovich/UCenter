@@ -1,0 +1,2 @@
+// Значок приложения для Windows (Проводник, панель задач)
+IDI_ICON1 ICON "icons/ucenter.ico"

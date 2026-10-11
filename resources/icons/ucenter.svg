@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Иконка UCenter: небесная карта спутников. Растры (icns, ico, png) собираются из этого файла,
+       см. tools/render_icons/render.sh -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1F3B73"/>
+      <stop offset="1" stop-color="#0B1630"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#2E5BB8" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#2E5BB8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Скруглённый квадрат с полями, как у значков macOS -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)"/>
+  <!-- Кольца возвышения 0°, 30°, 60° и стороны света -->
+  <g fill="none" stroke="#FFFFFF">
+    <circle cx="512" cy="512" r="300" stroke-width="18" stroke-opacity="0.9"/>
+    <circle cx="512" cy="512" r="200" stroke-width="10" stroke-opacity="0.45"/>
+    <circle cx="512" cy="512" r="100" stroke-width="10" stroke-opacity="0.45"/>
+    <path d="M212 512H812M512 212V812" stroke-width="8" stroke-opacity="0.35"/>
+  </g>
+  <!-- Север -->
+  <path d="M512 150 L548 228 L476 228 Z" fill="#FF5A4E"/>
+  <!-- Спутники в цветах систем: GPS, Galileo, GLONASS, BeiDou, SBAS -->
+  <g stroke="#0B1630" stroke-width="10">
+    <circle cx="640" cy="330" r="46" fill="#F5A742"/>
+    <circle cx="372" cy="402" r="40" fill="#F2E82E"/>
+    <circle cx="700" cy="590" r="40" fill="#6BB6E3"/>
+    <circle cx="452" cy="672" r="44" fill="#A4D65E"/>
+    <circle cx="560" cy="470" r="34" fill="#F5A742"/>
+    <circle cx="300" cy="560" r="30" fill="#9AA0A6"/>
+  </g>
+</svg>
