@@ -1,0 +1,115 @@
+# Сборка, тесты и пакеты для macOS и Windows; на Linux — проверки кода и фаззинг.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+env:
+  QT_VERSION: '6.8.3'
+  QT_MODULES: 'qtpositioning qtserialport'
+
+jobs:
+  build:
+    name: Build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, windows-2022]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # теги нужны для номера версии (cmake/version.cmake)
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Configure
+        # Предупреждения как ошибки — кроме MSVC: его /W4 строже и проверен меньше
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          -DUCENTER_WERROR=${{ runner.os == 'Windows' && 'OFF' || 'ON' }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build --build-config Release --output-on-failure
+
+      - name: Package
+        run: cpack --config build/CPackConfig.cmake -C Release -B build/package
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: UCenter-${{ runner.os }}
+          path: |
+            build/package/*.dmg
+            build/package/*.zip
+          if-no-files-found: error
+
+  checks:
+    name: Format, clang-tidy, sanitizers, fuzzing (Linux)
+    runs-on: ubuntu-24.04
+    env:
+      CC: clang
+      CXX: clang++
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang clang-tidy clang-format libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: clang-format
+        run: tools/format.sh --check
+
+      - name: Configure (ASan + UBSan)
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUCENTER_WERROR=ON
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test under sanitizers
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Translations are up to date
+        # lupdate не должен находить новых или изменённых строк: иначе .ts отстали от кода
+        run: |
+          cmake --build build --target update_translations
+          git diff --exit-code -- translations/
+
+      - name: clang-tidy
+        run: tools/clang_tidy.sh build
+
+      - name: Fuzz the frame reader
+        run: |
+          cmake -S . -B build-fuzz -DCMAKE_BUILD_TYPE=Debug -DUCENTER_FUZZ=ON
+          cmake --build build-fuzz --target fuzz_frame_reader --parallel
+          mkdir -p corpus
+          build-fuzz/fuzz_frame_reader -max_total_time=120 -timeout=10 corpus fuzz/corpus
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: fuzz-crashes
+          path: |
+            crash-*
+            timeout-*
+            leak-*
+          if-no-files-found: ignore

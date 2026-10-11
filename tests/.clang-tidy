@@ -1,0 +1,3 @@
+# В тестах значение optional проверяется QVERIFY перед разыменованием — анализатор этого не видит
+InheritParentConfig: true
+Checks: '-bugprone-unchecked-optional-access'

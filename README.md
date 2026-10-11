@@ -105,7 +105,13 @@ cmake --build build-fuzz --target fuzz_frame_reader
 build-fuzz/fuzz_frame_reader -max_total_time=120 new-corpus fuzz/corpus
 ```
 
-On macOS 26 the AddressSanitizer runtime of LLVM 19 hangs at start-up, so the fuzzer is built there with `UCENTER_FUZZ_SANITIZERS=undefined`; on Linux it runs with ASan and UBSan.
+On macOS 26 the AddressSanitizer runtime of LLVM 19 hangs at start-up, so the fuzzer is built there with `UCENTER_FUZZ_SANITIZERS=undefined`; CI fuzzes on Linux with ASan and UBSan.
+
+### Code style and static analysis
+
+- `tools/format.sh` formats the code with clang-format ([.clang-format](.clang-format)); `tools/format.sh --check` only checks.
+- `tools/clang_tidy.sh [build dir]` runs clang-tidy ([.clang-tidy](.clang-tidy)) with the flags from `compile_commands.json`.
+- `-DUCENTER_WERROR=ON` turns compiler warnings (`-Wall -Wextra -Wpedantic -Wshadow`, MSVC `/W4`) into errors.
 
 ### Translations
 
@@ -123,6 +129,10 @@ To add a language: add its code to `UCENTER_LANGUAGES` in [CMakeLists.txt](CMake
 
 The app icon is drawn in [resources/icons/ucenter.svg](resources/icons/ucenter.svg); `tools/render_icons/render.sh` renders `ucenter.png`, `ucenter.ico` and (on macOS) `ucenter.icns` from it.
 
+### Continuous integration
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml): on macOS and Windows — build with warnings as errors (MSVC without), tests and a package (DMG / ZIP) as an artifact; on Linux — clang-format, tests under ASan and UBSan, clang-tidy and two minutes of fuzzing.
+
 ## Architecture
 
 The code is split into a GUI-independent core and a thin UI layer. Dependencies point one way only: `ui` includes `core`, never the reverse. The core is a static library (`ucenter_core`) linked by the app, the tests and the fuzzer. The UI never talks to the serial port directly: all receiver I/O goes through `ReceiverSession`, and `MainWindow` only assembles the components and connects their signals. `AzimuthTab` does the same for its own widgets.
@@ -134,7 +144,7 @@ resources/                   App icon (SVG source, png, ico, icns) and the Windo
 translations/                ucenter_<language>.ts — translations (ru, es, zh_CN)
 tests/                       test_core (core logic), test_session (port via a pseudo-terminal)
 fuzz/                        libFuzzer target for the frame reader and its seed corpus
-tools/                       render_icons/ — renders the icon from SVG
+tools/                       format.sh, clang_tidy.sh, render_icons/
 src/
   main.cpp                   Entry point: language, icon, theme; reopens the window when the language changes
   core/                      No widgets; QtCore (thread, signals, timer), QtSerialPort and QtPositioning only
