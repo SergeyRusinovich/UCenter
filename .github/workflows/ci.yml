@@ -74,7 +74,8 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang clang-tidy libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+          # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок
+          sudo apt-get install -y clang clang-tidy-19 libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
           # Та же версия clang-format, что у разработчиков: разные версии форматируют по-разному
           pip install --user clang-format==19.1.7
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
@@ -112,7 +113,15 @@ jobs:
           git diff --exit-code -- translations/
 
       - name: clang-tidy
-        run: tools/clang_tidy.sh build
+        env:
+          CLANG_TIDY: clang-tidy-19
+          RUN_CLANG_TIDY: run-clang-tidy-19
+        run: |
+          if ! tools/clang_tidy.sh build > tidy.log 2>&1; then
+            cat tidy.log
+            echo "::error title=clang-tidy::$(grep -E 'warning:|error:' tidy.log | sort -u | head -30 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
 
       - name: Fuzz the frame reader
         run: |
