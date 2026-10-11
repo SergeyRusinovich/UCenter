@@ -20,7 +20,7 @@ jobs:
       matrix:
         os: [macos-14, windows-2022]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # теги нужны для номера версии (cmake/version.cmake)
 
@@ -65,7 +65,7 @@ jobs:
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -B build/package
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: UCenter-${{ runner.os }}
           path: |
@@ -81,7 +81,7 @@ jobs:
       CXX: clang++
       QT_QPA_PLATFORM: offscreen
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install tools
         run: |
@@ -142,7 +142,7 @@ jobs:
           mkdir -p corpus
           build-fuzz/fuzz_frame_reader -max_total_time=120 -timeout=10 corpus fuzz/corpus
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: fuzz-crashes
@@ -161,7 +161,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: UCenter-*
           merge-multiple: true

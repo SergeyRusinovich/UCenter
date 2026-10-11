@@ -18,6 +18,7 @@
 #include "core/ubx.h"
 
 #include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QRandomGenerator>
@@ -170,6 +171,32 @@ private slots:
         QFile csv(csvPath);
         QVERIFY(csv.open(QIODevice::ReadOnly));
         QCOMPARE(csv.readAll().trimmed().split('\n').size(), 2);
+    }
+
+    void legacyFileIsMovedOnce()
+    {
+        QTemporaryDir tmp;
+        const QString legacy = tmp.filePath(QStringLiteral("m.json"));
+        const QString path = tmp.filePath(QStringLiteral("sub/m.json"));
+        // Переносить нечего — новый каталог не создаётся
+        QCOMPARE(baseline_store::moveFromLegacy(legacy, path), QString());
+        QVERIFY(!QFileInfo::exists(tmp.filePath(QStringLiteral("sub"))));
+
+        const QList<Baseline> old{measure({55.75, 37.62}, {55.76, 37.63})};
+        QCOMPARE(baseline_store::saveJson(legacy, old), QString());
+        QCOMPARE(baseline_store::moveFromLegacy(legacy, path), QString());
+        QVERIFY(!QFile::exists(legacy));
+        QList<Baseline> loaded;
+        QCOMPARE(baseline_store::loadJson(path, &loaded), QString());
+        QCOMPARE(loaded, old);
+
+        // В новом каталоге уже есть файл — прежний не трогаем и ничего не перезаписываем
+        const QList<Baseline> other{measure({40.0, -3.7}, {40.1, -3.6})};
+        QCOMPARE(baseline_store::saveJson(legacy, other), QString());
+        QCOMPARE(baseline_store::moveFromLegacy(legacy, path), QString());
+        QVERIFY(QFile::exists(legacy));
+        QCOMPARE(baseline_store::loadJson(path, &loaded), QString());
+        QCOMPARE(loaded, old);
     }
 
     void corruptJsonIsReported()

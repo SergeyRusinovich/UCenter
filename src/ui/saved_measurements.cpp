@@ -5,6 +5,7 @@
 
 #include <QDir>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMessageBox>
@@ -48,7 +49,15 @@ const QList<std::pair<const char *, std::function<QString(const Baseline &)>>> &
 QString defaultStorePath()
 {
     const QString base = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-    return QDir(base).filePath(QLatin1String(StoreFile));
+    const QString path = QDir(base).filePath(QLatin1String(StoreFile));
+#ifdef Q_OS_WIN
+    // До 1.0.0 организация в Windows не задавалась (ADR 0016): каталог данных был на уровень выше.
+    // Не удалось перенести — работаем с прежним файлом, чтобы замеры не пропали
+    const QString legacy = QFileInfo(base).dir().filePath(QLatin1String(StoreFile));
+    if (!baseline_store::moveFromLegacy(legacy, path).isEmpty())
+        return legacy;
+#endif
+    return path;
 }
 
 }  // namespace

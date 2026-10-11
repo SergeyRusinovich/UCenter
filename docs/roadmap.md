@@ -4,13 +4,13 @@ Planned improvements after 1.0.0, in the order they should be done. Each step li
 
 Principle: **measure, then optimize.** No performance work starts without a number to beat, and every optimization ends with the same measurement repeated.
 
-## Phase 0 — Housekeeping (before anything else)
+## Phase 0 — Housekeeping (before anything else) ✅ done
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 0.1 | Move `measurements.json` on Windows: on startup, if the file is missing in the new data directory but present in `%APPDATA%\UCenter`, move it ([0016](adr/0016-windows-organization-name.md)) | A test with a temporary `APPDATA` shows the file moved once and never overwritten | S |
-| 0.2 | Delete merged branches, locally and on GitHub | `git branch -a` shows only `main` and work in progress | S |
-| 0.3 | Update GitHub Actions to versions on Node 24 (`actions/checkout`, `upload-artifact`, `download-artifact`) | No deprecation annotations in a CI run | S |
+| 0.1 | ✅ Move `measurements.json` on Windows: on startup, if the file is missing in the new data directory but present in `%APPDATA%\UCenter`, move it ([0016](adr/0016-windows-organization-name.md)) | `test_core` (`legacyFileIsMovedOnce`) shows the file moved once and never overwritten; if the move fails, the app keeps using the old file | S |
+| 0.2 | ✅ Delete merged branches, locally and on GitHub | `git branch -a` shows only `main` and work in progress | S |
+| 0.3 | ✅ Update GitHub Actions to versions on Node 24 (`actions/checkout@v7`, `upload-artifact@v7`, `download-artifact@v8`) | No deprecation annotations in a CI run | S |
 
 ## Phase 1 — A baseline to measure against
 
