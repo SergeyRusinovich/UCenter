@@ -151,3 +151,26 @@ jobs:
             timeout-*
             leak-*
           if-no-files-found: ignore
+
+  release:
+    # Тег v* — черновик релиза GitHub с пакетами macOS и Windows; публикуется вручную после проверки
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, checks]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: UCenter-*
+          merge-multiple: true
+          path: dist
+
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --repo "$GITHUB_REPOSITORY" --draft --verify-tag
+          --title "UCenter ${GITHUB_REF_NAME#v}" --generate-notes

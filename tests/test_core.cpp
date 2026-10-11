@@ -96,6 +96,13 @@ class CoreTest : public QObject
     Q_OBJECT
 
 private slots:
+    void initTestCase()
+    {
+        // Без организации QSettings в Windows ничего не читает и не пишет; своё имя —
+        // чтобы тесты не трогали настройки приложения
+        QCoreApplication::setOrganizationName(QStringLiteral("UCenter-tests"));
+    }
+
     // ---------- Геодезия ----------
     void vincentyReference()
     {
