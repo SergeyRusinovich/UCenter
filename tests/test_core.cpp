@@ -4,9 +4,12 @@
 // Запуск: ctest --test-dir build (или build/test_core)
 #include "core/baseline.h"
 #include "core/baseline_store.h"
+#include "core/cpu_time.h"
 #include "core/frame_reader.h"
 #include "core/geo.h"
 #include "core/language.h"
+#include "core/message_log.h"
+#include "core/messages.h"
 #include "core/navigation.h"
 #include "core/nmea.h"
 #include "core/places.h"
@@ -18,6 +21,7 @@
 #include "core/ubx.h"
 #include "recording.h"
 
+#include <QElapsedTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
@@ -443,6 +447,109 @@ private slots:
         QCOMPARE(values.size(), 2);
         QCOMPARE(values.value(receiver_config::RateKey), 1000);
         QCOMPARE(values.value(receiver_config::GpsEnaKey), 1);
+    }
+
+    // ---------- Замеры ----------
+    void cpuTimeGrowsWithWork()
+    {
+        const double thread0 = cpu_time::thread(), process0 = cpu_time::process();
+        QElapsedTimer t;
+        t.start();
+        volatile double x = 0;
+        while (t.elapsed() < 100)
+            x = x + std::sqrt(double(t.nsecsElapsed()));
+        const double thread = cpu_time::thread() - thread0, process = cpu_time::process() - process0;
+        QVERIFY2(thread > 0.05 && thread < 1.0, qPrintable(QString::number(thread)));
+        QVERIFY(process >= thread * 0.9);  // процесс — не меньше потока (с поправкой на точность часов)
+    }
+
+    // ---------- Консоль ----------
+    void messageLogEvictsAndFilters()
+    {
+        const auto msg = [](int n, bool ubx) {
+            GnssMessage m;
+            m.protocol = ubx ? GnssMessage::Protocol::Ubx : GnssMessage::Protocol::Nmea;
+            m.identity = QString::number(n);
+            return m;
+        };
+        const auto ids = [](const MessageLog &log) {
+            QStringList out;
+            for (qsizetype i = 0; i < log.rowCount(); ++i)
+                out << log.row(i).identity;
+            return out.join(u' ');
+        };
+        // Число вытесненных строк; -1 — rowsAddedBy() разошёлся с тем, что добавил append()
+        const auto add = [](MessageLog &log, const QList<GnssMessage> &batch) -> qsizetype {
+            const qsizetype evicted = log.rowsEvictedBy(batch.size());
+            log.evict(batch.size());
+            const qsizetype added = log.rowsAddedBy(batch);
+            const qsizetype before = log.rowCount();
+            log.append(batch);
+            return log.rowCount() == before + added ? evicted : -1;
+        };
+
+        MessageLog log(5);
+        QCOMPARE(add(log, {msg(0, false), msg(1, true), msg(2, false), msg(3, true)}), 0);
+        QCOMPARE(ids(log), QStringLiteral("0 1 2 3"));
+        log.setFilter(MessageLog::Filter::Ubx);  // фильтр — по уже накопленным
+        QCOMPARE(ids(log), QStringLiteral("1 3"));
+        // Ещё три: вытесняются 0 и 1, из видимых строк — одна («1»)
+        QCOMPARE(add(log, {msg(4, false), msg(5, true), msg(6, false)}), 1);
+        QCOMPARE(ids(log), QStringLiteral("3 5"));
+        log.setFilter(MessageLog::Filter::Nmea);
+        QCOMPARE(ids(log), QStringLiteral("2 4 6"));
+        log.setFilter(MessageLog::Filter::All);
+        QCOMPARE(ids(log), QStringLiteral("2 3 4 5 6"));
+        // Пачка больше ёмкости: остаются её последние сообщения
+        QList<GnssMessage> big;
+        for (int n = 10; n < 18; ++n)
+            big << msg(n, false);
+        QCOMPARE(add(log, big), 5);
+        QCOMPARE(ids(log), QStringLiteral("13 14 15 16 17"));
+        log.clear();
+        QCOMPARE(log.rowCount(), 0);
+        QCOMPARE(add(log, {msg(20, true)}), 0);
+        QCOMPARE(ids(log), QStringLiteral("20"));
+    }
+
+    // Подробности есть у каждого типа из message_types.h: разобранные или поименованные поля и кадр
+    void messageDetailsForEveryType()
+    {
+        FrameReader reader;
+        QList<GnssMessage> msgs = reader.feed(recording::reference(1));
+        msgs << ubxMsg("b56205010200068a98c1")
+             << ubx::message(ubx::frame(ubx::ClassCfg, ubx::IdCfgValget,
+                                        QByteArray::fromHex("01000000"
+                                                            "01002130e803")));
+        QSet<qsizetype> types;
+        for (const GnssMessage &m : std::as_const(msgs)) {
+            types.insert(qsizetype(m.data.index()));
+            const auto rows = messages::details(m);
+            QHash<QString, QString> map;
+            for (const auto &[name, value] : rows)
+                map.insert(name, value);
+            QCOMPARE(map.value(QStringLiteral("message")), m.identity);
+            QVERIFY2(rows.size() > 3, qPrintable(m.identity));  // тип, длина, поля, кадр
+            QVERIFY(!map.value(QStringLiteral("raw")).isEmpty());
+        }
+        QCOMPARE(types.size(), qsizetype(std::variant_size_v<MessageData>) - 1);  // все, кроме monostate
+        QVERIFY(!types.contains(0));
+
+        const auto value = [&msgs](const QString &identity, const QString &name) {
+            for (const GnssMessage &m : std::as_const(msgs))
+                if (m.identity == identity)
+                    for (const auto &[n, v] : messages::details(m))
+                        if (n == name)
+                            return v;
+            return QString();
+        };
+        QCOMPARE(value(QStringLiteral("GNGGA"), QStringLiteral("quality")), QStringLiteral("1"));
+        QCOMPARE(value(QStringLiteral("GPGSV"), QStringLiteral("signalId")), QStringLiteral("1"));
+        QCOMPARE(value(QStringLiteral("GNGSA"), QStringLiteral("systemId")), QStringLiteral("1"));
+        QCOMPARE(value(QStringLiteral("NAV-PVT"), QStringLiteral("fixType")), QStringLiteral("3"));
+        QCOMPARE(value(QStringLiteral("ACK-ACK"), QStringLiteral("msgID")), QStringLiteral("CFG-VALSET"));
+        QCOMPARE(value(QStringLiteral("CFG-VALGET"), QStringLiteral("CFG_RATE_MEAS")), QStringLiteral("1000"));
+        QVERIFY(value(QStringLiteral("NAV-PVT"), QStringLiteral("raw")).startsWith(QStringLiteral("B5 62 01 07")));
     }
 
     // ---------- Разбор потока ----------

@@ -1,5 +1,8 @@
 #include "core/nmea.h"
 
+#include <QHash>
+#include <QStringList>
+
 #include <type_traits>
 
 namespace nmea {
@@ -203,6 +206,35 @@ std::optional<GnssMessage> parse(const QByteArray &line)
     }
     msg.fields = parts;
     return msg;
+}
+
+QString fieldName(const GnssMessage &msg, qsizetype index)
+{
+    static const QHash<QString, QStringList> names = {
+        {QStringLiteral("GGA"), QStringLiteral("time lat NS lon EW quality numSV HDOP alt altUnit sep sepUnit "
+                                               "diffAge diffStation")
+                                    .split(u' ')},
+        {QStringLiteral("RMC"),
+         QStringLiteral("time status lat NS lon EW spd cog date mv mvEW posMode navStatus").split(u' ')},
+        {QStringLiteral("GSA"), QStringLiteral("opMode navMode sv1 sv2 sv3 sv4 sv5 sv6 sv7 sv8 sv9 sv10 sv11 sv12 "
+                                               "PDOP HDOP VDOP systemId")
+                                    .split(u' ')},
+    };
+    if (msg.sentence == u"GSV") {
+        // numMsg, msgNum, numSV, группы по 4 поля и, в NMEA 4.10+, signalId в конце
+        static const QStringList head = {QStringLiteral("numMsg"), QStringLiteral("msgNum"), QStringLiteral("numSV")};
+        static const QStringList group = {QStringLiteral("svid"), QStringLiteral("elv"), QStringLiteral("az"),
+                                          QStringLiteral("cno")};
+        if (index < head.size())
+            return head[index];
+        const qsizetype rest = msg.fields.size() - head.size();
+        if (rest % 4 == 1 && index == msg.fields.size() - 1)
+            return QStringLiteral("signalId");
+        const qsizetype n = index - head.size();
+        return group[n % 4] + QString::number(n / 4 + 1);
+    }
+    const QStringList list = names.value(msg.sentence);
+    return index < list.size() ? list[index] : QString::number(index + 1);
 }
 
 }  // namespace nmea

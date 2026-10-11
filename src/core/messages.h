@@ -43,5 +43,8 @@ namespace messages {
 
 // UBX — в разобранном виде, NMEA — исходной строкой
 QString messageText(const GnssMessage &msg);
+// Подробности для консоли «имя — значение»: тип и длина, разобранные (UBX) или поименованные (NMEA)
+// поля и кадр целиком (raw; UBX — в hex по 16 байт в строке)
+QList<std::pair<QString, QString>> details(const GnssMessage &msg);
 
 }  // namespace messages

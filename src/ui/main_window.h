@@ -32,6 +32,8 @@ public:
     // Воспроизвести запись сразу после запуска (параметры командной строки — для замеров);
     // quitAtEnd — закрыть приложение, когда запись закончится
     void startReplay(const QString &path, double speed, bool quitAtEnd);
+    // Название открытой вкладки (для отчёта --measure)
+    QString currentTab() const;
 
 signals:
     // Пользователь выбрал язык; окно пересоздаёт владелец

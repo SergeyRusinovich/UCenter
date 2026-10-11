@@ -49,6 +49,8 @@ QByteArray buildCfgCfg(quint32 clearMask, quint32 saveMask, quint32 loadMask, qu
 
 // Текст для консоли в духе pyubx2: «<UBX(NAV-PVT, iTOW=…, …)>»
 QString describe(const GnssMessage &msg);
+// Те же поля по одному: «имя — значение» (подробный просмотр в консоли); пусто — сообщение без разбора
+QList<std::pair<QString, QString>> fields(const GnssMessage &msg);
 
 }  // namespace ubx
 

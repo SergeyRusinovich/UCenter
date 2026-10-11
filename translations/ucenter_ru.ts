@@ -244,6 +244,14 @@ Rate, constellations and message output return to their default values.</source>
         <source>Clear</source>
         <translation>Очистить</translation>
     </message>
+    <message>
+        <source>Copy</source>
+        <translation>Копировать</translation>
+    </message>
+    <message>
+        <source>Select a message to see its fields</source>
+        <translation>Выберите сообщение, чтобы увидеть его поля</translation>
+    </message>
 </context>
 <context>
     <name>ConstellationFilters</name>

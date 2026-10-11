@@ -244,6 +244,14 @@ Rate, constellations and message output return to their default values.</source>
         <source>Clear</source>
         <translation>清除</translation>
     </message>
+    <message>
+        <source>Copy</source>
+        <translation>复制</translation>
+    </message>
+    <message>
+        <source>Select a message to see its fields</source>
+        <translation>选择一条消息以查看其字段</translation>
+    </message>
 </context>
 <context>
     <name>ConstellationFilters</name>

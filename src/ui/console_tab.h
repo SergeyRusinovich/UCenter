@@ -1,4 +1,4 @@
-// Консоль данных NMEA/UBX с Freeze и фильтрами.
+// Консоль данных NMEA/UBX: список сообщений с Freeze и фильтрами, под ним — поля выбранного сообщения.
 #pragma once
 
 #include "core/messages.h"
@@ -7,7 +7,9 @@
 #include <QList>
 #include <QWidget>
 
+class ConsoleModel;
 class QCheckBox;
+class QListView;
 class QPlainTextEdit;
 
 class ConsoleTab : public QWidget
@@ -15,26 +17,30 @@ class ConsoleTab : public QWidget
     Q_OBJECT
 
 public:
-    static constexpr int MaxLines = 5000;  // ограничиваем память
-    // Компоновка и отрисовка текста дороже самих данных: выводим не чаще 4 раз в секунду
+    static constexpr int Capacity = 50000;  // сообщений в истории; фильтры показывают её часть
+    // Вставка строк и перерисовка дороже самих данных: выводим не чаще 4 раз в секунду
     static constexpr int FlushIntervalMs = 250;
 
     explicit ConsoleTab(QWidget *parent = nullptr);
 
     void appendMessage(const GnssMessage &msg);
-    // Выводит накопленные строки; пока вкладка скрыта или окно свёрнуто, сообщения только копятся
+    // Переносит накопленные сообщения в список (не чаще FlushIntervalMs)
     void flush();
 
 private:
     void clear();
+    void applyFilter();
     void saveFilters() const;
+    void showDetails(int row);
+    void copySelection() const;
 
     QCheckBox *m_freezeCb;
     QCheckBox *m_nmeaOnlyCb;
     QCheckBox *m_ubxOnlyCb;
-    QPlainTextEdit *m_console;
-    // Сообщения копятся здесь, а в текст превращаются в flush() — только те, что будут показаны,
-    // и одной вставкой вместо сотен в секунду
+    ConsoleModel *m_model;
+    QListView *m_view;
+    QPlainTextEdit *m_details;
+    // Сообщения копятся здесь и переходят в список одной пачкой вместо сотен вставок в секунду
     QList<GnssMessage> m_pending;
     QElapsedTimer m_lastFlush;
 };

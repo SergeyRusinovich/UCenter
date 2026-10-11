@@ -36,10 +36,12 @@ endif()
 add_library(ucenter_core STATIC
     src/core/baseline.cpp
     src/core/baseline_store.cpp
+    src/core/cpu_time.cpp
     src/core/frame_reader.cpp
     src/core/geo.cpp
     src/core/host_location.cpp
     src/core/language.cpp
+    src/core/message_log.cpp
     src/core/messages.cpp
     src/core/navigation.cpp
     src/core/nmea.cpp
@@ -70,6 +72,7 @@ qt_add_executable(UCenter WIN32 MACOSX_BUNDLE
     src/ui/compass_view.cpp
     src/ui/config_tab.cpp
     src/ui/connection_panel.cpp
+    src/ui/console_model.cpp
     src/ui/console_tab.cpp
     src/ui/dashboard_tab.cpp
     src/ui/filters.cpp

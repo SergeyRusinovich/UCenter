@@ -5,6 +5,7 @@
 
 #include <QPainter>
 
+#include <algorithm>
 #include <cmath>
 
 using painting::polar;
@@ -13,6 +14,17 @@ namespace {
 
 const char *const UnsupportedText = QT_TRANSLATE_NOOP(
     "CompassView", "Compass is not supported by this device\n(no heading sensor data from the receiver)");
+
+// Курс появился, пропал или повернулся на заметный угол (с учётом перехода через 360°)
+bool visiblyChanged(std::optional<double> before, std::optional<double> after)
+{
+    if (before.has_value() != after.has_value())
+        return true;
+    if (!before)
+        return false;
+    const double d = std::fmod(std::abs(*after - *before), 360.0);
+    return std::min(d, 360.0 - d) >= CompassView::VisibleDeg;
+}
 
 // Полуширина основания стрелки, повёрнутая вместе с ней
 QPointF side(double deg, double halfWidth)
@@ -30,6 +42,9 @@ CompassView::CompassView(QWidget *parent)
 
 void CompassView::setState(bool supported, std::optional<double> heading, std::optional<double> cog)
 {
+    const bool changed = supported != m_supported || visiblyChanged(m_heading, heading) || visiblyChanged(m_cog, cog);
+    if (!changed)
+        return;  // показанные значения остаются: разница меньше VisibleDeg
     m_supported = supported;
     m_heading = heading;
     m_cog = cog;

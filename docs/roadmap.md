@@ -81,14 +81,14 @@ Steady state: CPU time between the 20th and the 80th second of a replay of the r
 
 The map also looks better: with the origin on device pixels, the thin seams between tiles that were visible on Retina screens are gone.
 
-## Phase 3 — Interface
+## Phase 3 — Interface (code done, measurements pending)
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 3.1 | Console as a model and view: a ring buffer of `GnssMessage` in a `QAbstractListModel`, a `QListView` with uniform row heights, filters and freeze as a proxy model; text shaped only for visible rows | Filter switching is instant with a full buffer; the buffer can be raised from 5 000 to 50 000 messages; Console at 1× no slower than after 2.3 | M |
-| 3.2 | Console details: selecting a row shows the decoded fields of the message | Works for every type in `message_types.h` | M |
-| 3.3 | Measure on Windows: repeat 1.3 there and add the numbers to the table | The table has a Windows row for each tab | S |
-| 3.4 | Dashboard: repaint the compass only when the heading or course changes by a visible amount; find what else keeps the GUI thread at 7.7 % | Dashboard GUI thread at 1× under 5 % (the target 2.2 missed) | S |
+| 3.1 | ✅ Console as a model and view: `MessageLog` in the core (ring buffer of 50 000 messages, NMEA/UBX filter over the whole history), `ConsoleModel` + `QListView` with uniform rows, text built only for visible rows; copy, Esc to follow new lines again | `test_core` (`messageLogEvictsAndFilters`); filters switch instantly. **Not measured yet:** CPU of the Console tab after the change and memory with a full history | M |
+| 3.2 | ✅ Console details: selecting a row shows the fields of the message — named NMEA fields, decoded UBX fields, the frame in hex (`messages::details`) | `test_core` (`messageDetailsForEveryType`) covers every type in `message_types.h` | M |
+| 3.3 | Measure on Windows. Ready: `--measure 20,80 --measure-out load.txt` reports the GUI-thread and process load on every platform (`cpu_time`); **waiting for a run on a Windows machine** | The table has a Windows row for each tab | S |
+| 3.4 | ✅ Compass repaints only when the heading or course changes by at least 0.5° | **Not measured yet:** Dashboard GUI thread at 1× under 5 % | S |
 
 Dropped: decoding map tiles in a thread pool — decoding does not appear in the profile.
 
