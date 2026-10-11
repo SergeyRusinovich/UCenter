@@ -15,10 +15,13 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0009 | [Recordings are the raw byte stream; replay is paced by epoch time](0009-recording-and-replay.md) | Accepted |
 | 0010 | [Localization with Qt Linguist; language switch recreates the window](0010-localization.md) | Accepted, partly superseded by 0015 |
 | 0011 | [A signed app bundle on macOS for location access](0011-macos-bundle.md)       | Accepted |
-| 0012 | [Settings and data compatible with the Python version](0012-storage-compatibility.md) | Accepted |
+| 0012 | [Settings and data compatible with the Python version](0012-storage-compatibility.md) | Accepted, amended for Windows by 0016 |
 | 0013 | [Quality gates: tests without hardware, sanitizers, fuzzing, CI](0013-quality-gates.md) | Accepted |
 | 0014 | [Version from git tags; packages with CPack](0014-versioning-and-packaging.md) | Accepted |
 | 0015 | [The language is chosen in a drop-down list; the system language is not used](0015-explicit-language-choice.md) | Accepted |
+| 0016 | [On Windows the app sets an organization name for QSettings](0016-windows-organization-name.md) | Accepted |
+| 0017 | [Layered architecture with presentation models in the core; no MVVM, no QML](0017-layers-and-presentation-models.md) | Accepted |
+| 0018 | [Navigation and satellite models run in the reader thread and publish snapshots](0018-receiver-model-in-reader-thread.md) | Proposed |
 
 ## Writing a new record
 
