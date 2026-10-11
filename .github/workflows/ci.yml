@@ -50,6 +50,17 @@ jobs:
           fi
           cat ctest.log
 
+      - name: Diagnose a failed test start (Windows)
+        # Вывод QtTest пишется в файл, а не в консоль, — он не теряется, даже если консоли нет;
+        # код выхода 0xC0000135 (-1073741515) — не найдена DLL
+        if: failure() && runner.os == 'Windows'
+        shell: bash
+        run: |
+          exe=build/Release/test_core.exe
+          "$exe" -o diag.txt,txt; code=$?
+          deps=$(ls build/Release | tr '\n' ' ')
+          echo "::error title=test_core exit code $code::files: $deps%0A$(head -c 3000 diag.txt 2>/dev/null | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -B build/package
 
