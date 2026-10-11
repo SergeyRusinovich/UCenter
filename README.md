@@ -135,6 +135,8 @@ The app icon is drawn in [resources/icons/ucenter.svg](resources/icons/ucenter.s
 
 ## Architecture
 
+Why the code is shaped this way is recorded in [Architecture Decision Records](docs/adr/README.md): one short document per decision (language and framework, own protocol parser, threading, the map, recording, localization, packaging and others).
+
 The code is split into a GUI-independent core and a thin UI layer. Dependencies point one way only: `ui` includes `core`, never the reverse. The core is a static library (`ucenter_core`) linked by the app, the tests and the fuzzer. The UI never talks to the serial port directly: all receiver I/O goes through `ReceiverSession`, and `MainWindow` only assembles the components and connects their signals. `AzimuthTab` does the same for its own widgets.
 
 ```
@@ -142,6 +144,7 @@ CMakeLists.txt               Build: ucenter_core, UCenter (app bundle), tests, f
 cmake/                       Info.plist template, version from git
 resources/                   App icon (SVG source, png, ico, icns) and the Windows resource file
 translations/                ucenter_<language>.ts — translations (ru, es, zh_CN)
+docs/adr/                    Architecture Decision Records
 tests/                       test_core (core logic), test_session (port via a pseudo-terminal)
 fuzz/                        libFuzzer target for the frame reader and its seed corpus
 tools/                       format.sh, clang_tidy.sh, render_icons/
