@@ -1,0 +1,27 @@
+# Статический анализ: ошибки (bugprone), производительность, корректность Qt-идиом.
+# Запуск: tools/clang_tidy.sh [каталог сборки]
+# bugprone-exception-escape выключена: проект, как и Qt, не использует исключения
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-branch-clone,
+  -bugprone-exception-escape,
+  performance-*,
+  -performance-enum-size,
+  modernize-use-override,
+  modernize-use-nullptr,
+  modernize-use-emplace,
+  modernize-loop-convert,
+  readability-container-size-empty,
+  readability-redundant-string-init,
+  readability-inconsistent-declaration-parameter-name,
+  misc-unused-using-decls,
+  misc-redundant-expression,
+  clang-analyzer-*,
+  -clang-analyzer-cplusplus.NewDeleteLeaks,
+  -clang-analyzer-optin.cplusplus.VirtualCall
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/src/.*'
