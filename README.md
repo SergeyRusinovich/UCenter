@@ -1,6 +1,50 @@
-# UCenter
+<p align="center">
+  <img src="resources/icons/ucenter.png" width="96" alt="UCenter icon">
+</p>
+
+<h1 align="center">UCenter</h1>
+
+<p align="center">
+  Desktop viewer and configurator for u-blox M9 GNSS receivers
+</p>
+
+<p align="center">
+  <a href="https://github.com/SergeyRusinovich/UCenter/actions/workflows/ci.yml"><img src="https://github.com/SergeyRusinovich/UCenter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/SergeyRusinovich/UCenter" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus&logoColor=white" alt="C++20">
+  <img src="https://img.shields.io/badge/Qt-6.7%2B-41CD52?logo=qt&logoColor=white" alt="Qt 6.7+">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-lightgrey" alt="Platforms: macOS, Windows">
+  <img src="https://img.shields.io/badge/i18n-EN%20%7C%20RU%20%7C%20ES%20%7C%20ZH-blue" alt="Languages: English, Russian, Spanish, Chinese">
+</p>
+
+<p align="center">
+  <img src="docs/images/dashboard.jpg" width="900" alt="Dashboard: position, fix, DOP, speed and course, compass and a map">
+</p>
 
 A lightweight, cross-platform desktop alternative to u-center for working with u-blox M9 GNSS receivers over a native USB (CDC-ACM) serial port. Built with C++20 and Qt 6 (Widgets, Network, SerialPort, Positioning); the NMEA and UBX protocols are parsed by the app itself, without third-party libraries. The interface is available in English, Russian, Spanish and Simplified Chinese.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/satellites.png" alt="Satellites tab"></td>
+    <td width="50%"><img src="docs/images/azimuth.jpg" alt="Azimuth tab"></td>
+  </tr>
+  <tr>
+    <td><b>Satellites</b> — sky plot and C/N0 per satellite for GPS, GLONASS, Galileo, BeiDou, SBAS and QZSS. A blue outline marks a satellite that is tracked but not used in the solution, a red one — not tracked.</td>
+    <td><b>Azimuth</b> — a baseline A→B on satellite imagery: azimuth and deviation from true north, distance and north/east offsets on the WGS84 ellipsoid; measurements are saved and exported to CSV.</td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/console.png" alt="Console tab"></td>
+    <td><img src="docs/images/configuration.png" alt="Configuration tab"></td>
+  </tr>
+  <tr>
+    <td><b>Console</b> — the live stream: NMEA sentences as received and decoded UBX messages, with freeze and NMEA/UBX filters.</td>
+    <td><b>Configuration</b> — navigation rate, constellations and USB message output through the M9 Configuration Database; every change is confirmed by ACK and read back.</td>
+  </tr>
+</table>
+
+The picture at the top is the <b>Dashboard</b>: position, UTC and local time, fix type, PDOP/HDOP, satellites used, speed and course, a compass and a map.
 
 ## Features
 
@@ -46,7 +90,7 @@ Measures a baseline from point A to point B on the WGS84 ellipsoid (Vincenty inv
 
 ## Requirements
 
-- CMake 3.21+ and a C++20 compiler (Apple Clang / Xcode Command Line Tools, MSVC 2019+, GCC 11+, Clang 15+)
+- CMake 3.22+ and a C++20 compiler (Apple Clang / Xcode Command Line Tools, MSVC 2019+, GCC 11+, Clang 15+)
 - Qt 6.7+ with the modules Core, Gui, Widgets, Network, SerialPort, Positioning, Svg, LinguistTools (and Test for the tests)
 
 On macOS Qt can be installed with Homebrew (`brew install qt cmake`) or the Qt Online Installer; on Windows — with the Qt Online Installer.
@@ -266,3 +310,7 @@ AzimuthTab --expandChanged--> MainWindow (hides the connection panel)
 - The _Marker size_ slider scales satellite markers on the sky plot only.
 - The computer's location on a Mac without GPS comes from Wi-Fi and is typically accurate to tens of meters, which limits short baselines measured from the computer's position.
 - `test_session` uses pseudo-terminals and is not built on Windows.
+
+## License
+
+UCenter is released under the [MIT License](LICENSE). It uses [Qt](https://www.qt.io) under the LGPL v3, linked dynamically; packages built with `cpack` carry the Qt libraries unchanged. Map tiles and place search come from Esri, Google and OpenStreetMap under their own terms (see [Design notes](#design-notes)).

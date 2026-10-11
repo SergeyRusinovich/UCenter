@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.22)
 
 include(cmake/version.cmake)
 project(UCenter VERSION ${UCENTER_VERSION} DESCRIPTION "Desktop GNSS viewer for u-blox M9" LANGUAGES CXX)
@@ -191,6 +191,12 @@ if(UNIX)
     target_link_libraries(test_session PRIVATE ucenter_core Qt6::Test $<$<PLATFORM_ID:Linux>:util>)
     ucenter_warnings(test_session)
     add_test(NAME test_session COMMAND test_session)
+endif()
+
+if(WIN32)
+    # Рядом с тестами нет Qt (его кладёт только windeployqt при установке): DLL ищутся через PATH
+    set_tests_properties(test_core PROPERTIES
+        ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>")
 endif()
 
 if(UCENTER_FUZZ)

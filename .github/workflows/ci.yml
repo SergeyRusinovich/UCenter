@@ -3,7 +3,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ['**']
     tags: ['v*']
   pull_request:
 
@@ -40,7 +40,27 @@ jobs:
         run: cmake --build build --config Release --parallel
 
       - name: Test
-        run: ctest --test-dir build --build-config Release --output-on-failure
+        shell: bash
+        # Текст упавших тестов — ещё и в аннотацию: её видно без доступа к журналам
+        run: |
+          if ! ctest --test-dir build --build-config Release --output-on-failure > ctest.log 2>&1; then
+            cat ctest.log
+            echo "::error title=Tests failed::$(tail -c 4000 ctest.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
+          cat ctest.log
+
+      - name: Diagnose a failed test start (Windows)
+        # Вывод QtTest пишется в файл, а не в консоль, — он не теряется, даже если консоли нет;
+        # код выхода 0xC0000135 (-1073741515) — не найдена DLL
+        if: failure() && runner.os == 'Windows'
+        shell: bash
+        run: |
+          exe=build/Release/test_core.exe
+          code=0
+          "$exe" -o diag.txt,txt || code=$?  # bash в Actions запущен с -e: без «||» шаг прервётся здесь
+          deps=$(ls build/Release | tr '\n' ' ')
+          echo "::error title=test_core exit code $code::files: $deps%0A$(head -c 3000 diag.txt 2>/dev/null | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
 
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -B build/package
@@ -66,7 +86,11 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang clang-tidy clang-format libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+          # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок
+          sudo apt-get install -y clang clang-tidy-19 libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+          # Та же версия clang-format, что у разработчиков: разные версии форматируют по-разному
+          pip install --user clang-format==19.1.7
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - uses: jurplel/install-qt-action@v4
         with:
@@ -75,7 +99,7 @@ jobs:
           cache: true
 
       - name: clang-format
-        run: tools/format.sh --check
+        run: clang-format --version && tools/format.sh --check
 
       - name: Configure (ASan + UBSan)
         run: >
@@ -86,7 +110,13 @@ jobs:
         run: cmake --build build --parallel
 
       - name: Test under sanitizers
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          if ! ctest --test-dir build --output-on-failure > ctest.log 2>&1; then
+            cat ctest.log
+            echo "::error title=Tests failed::$(tail -c 4000 ctest.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
+          cat ctest.log
 
       - name: Translations are up to date
         # lupdate не должен находить новых или изменённых строк: иначе .ts отстали от кода
@@ -95,7 +125,15 @@ jobs:
           git diff --exit-code -- translations/
 
       - name: clang-tidy
-        run: tools/clang_tidy.sh build
+        env:
+          CLANG_TIDY: clang-tidy-19
+          RUN_CLANG_TIDY: run-clang-tidy-19
+        run: |
+          if ! tools/clang_tidy.sh build > tidy.log 2>&1; then
+            cat tidy.log
+            echo "::error title=clang-tidy::$(grep -E 'warning:|error:' tidy.log | sort -u | head -30 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          fi
 
       - name: Fuzz the frame reader
         run: |
