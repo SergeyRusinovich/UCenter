@@ -116,6 +116,8 @@ cpack --config build/CPackConfig.cmake -B build/package
 
 The version comes from git: a tag `v1.2.3` gives `1.2.3`, commits after the tag and uncommitted changes are added to the full version shown in the title bar (`1.2.3-4-gabc1234-dirty`). Without a tag the base version from [cmake/version.cmake](cmake/version.cmake) is used. The version is read when CMake configures the build, so reconfigure after creating a tag.
 
+To release, push a tag `v1.2.3` from `main`: CI builds and tests the macOS and Windows packages and creates a draft GitHub release with the `.dmg` and `.zip` attached, which is published by hand after a check.
+
 ### Computer location on macOS
 
 macOS gives location only to an app bundle whose `Info.plist` declares why it needs it. The build produces such a bundle (`build/UCenter.app`, with `NSLocationUsageDescription` from [cmake/Info.plist.in](cmake/Info.plist.in)) and signs it ad hoc, so macOS can remember the permission.

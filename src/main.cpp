@@ -13,6 +13,11 @@ int main(int argc, char *argv[])
     QApplication app(argc, argv);
     // Задаёт каталоги данных (measurements.json), кэша тайлов и настроек
     QApplication::setApplicationName(QStringLiteral("UCenter"));
+#ifdef Q_OS_WIN
+    // Без организации QSettings в Windows ничего не сохраняет (реестр: Software\<организация>\<приложение>).
+    // В macOS не задаём: иначе сменились бы уже используемые пути данных и настроек
+    QApplication::setOrganizationName(QStringLiteral("UCenter"));
+#endif
     QApplication::setApplicationVersion(QStringLiteral(UCENTER_VERSION));
     QApplication::setWindowIcon(QIcon(QStringLiteral(":/icons/ucenter.png")));
     QApplication::setStyle(QStringLiteral("Fusion"));  // одинаковая основа на macOS и Windows, остальное — в QSS
