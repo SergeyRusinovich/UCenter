@@ -162,4 +162,17 @@ QString loadJson(const QString &path, QList<Baseline> *items)
     return {};
 }
 
+QString moveFromLegacy(const QString &legacyPath, const QString &path)
+{
+    if (!QFile::exists(legacyPath) || QFile::exists(path))
+        return {};
+    const QString dir = QFileInfo(path).absolutePath();
+    if (!QDir().mkpath(dir))
+        return QStringLiteral("cannot create directory %1").arg(dir);
+    QFile file(legacyPath);
+    if (!file.rename(path))
+        return file.errorString();
+    return {};
+}
+
 }  // namespace baseline_store

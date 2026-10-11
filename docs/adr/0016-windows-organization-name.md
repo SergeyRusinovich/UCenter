@@ -23,5 +23,5 @@
 ## Consequences
 
 - Settings are saved on Windows.
-- The Windows data directory moved: `measurements.json` written by an earlier Windows build (the Python version, or a C++ build before 1.0.0) is in `%APPDATA%\UCenter`, and the app no longer finds it there. A one-time move on startup is planned (see the [roadmap](../roadmap.md)); until then the file can be moved by hand.
+- The Windows data directory moved: `measurements.json` written by an earlier Windows build (the Python version, or a C++ build before 1.0.0) is in `%APPDATA%\UCenter`, and the app no longer finds it there. The app moves it once on startup when the new directory has no such file, and never overwrites an existing one; if the move fails, it keeps using the old file (roadmap step 0.1).
 - The rule "no organization name" in 0012 now holds for macOS only; code that builds storage paths must not assume the paths are the same on both platforms.

@@ -14,5 +14,7 @@ QString writeCsv(const QString &path, const QList<Baseline> &items);
 QString saveJson(const QString &path, const QList<Baseline> &items);
 // Пустой список, если файла нет; ошибка — если он не читается или повреждён
 QString loadJson(const QString &path, QList<Baseline> *items);
+// Переносит файл из прежнего каталога данных (ADR 0016), если в новом его ещё нет; существующий не перезаписывается
+QString moveFromLegacy(const QString &legacyPath, const QString &path);
 
 }  // namespace baseline_store
