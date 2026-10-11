@@ -12,7 +12,7 @@ class CompassView;
 class MapView;
 class QComboBox;
 class QGroupBox;
-class QLabel;
+class ValueLabel;
 
 class DashboardTab : public QWidget
 {
@@ -27,9 +27,9 @@ private:
     QGroupBox *buildTimeCorrection();
     void updateLocalTime();
 
-    QList<QLabel *> m_labels;  // по одной на строку FIELDS
+    QList<ValueLabel *> m_labels;  // по одной на строку FIELDS
     QComboBox *m_offsetCombo = nullptr;
-    QLabel *m_localLabel = nullptr;
+    ValueLabel *m_localLabel = nullptr;
     CompassView *m_compass;
     MapView *m_map;
     std::optional<int> m_utcSeconds;

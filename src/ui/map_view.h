@@ -4,6 +4,7 @@
 #include "core/geo.h"
 #include "ui/tile_loader.h"
 
+#include <QCache>
 #include <QList>
 #include <QPushButton>
 #include <QWidget>
@@ -18,9 +19,10 @@ class MapView : public QWidget
 
 public:
     static constexpr int MinZoom = 3, MaxZoom = 19;
-    static constexpr int FixZoom = 16;      // масштаб, с которым карта открывается на первой позиции
-    static constexpr double ClickSlop = 4;  // px: сдвиг мыши меньше этого — щелчок, а не перетаскивание
-    static constexpr int WheelStep = 120;   // angleDelta одного щелчка колеса
+    static constexpr int FixZoom = 16;              // масштаб, с которым карта открывается на первой позиции
+    static constexpr double ClickSlop = 4;          // px: сдвиг мыши меньше этого — щелчок, а не перетаскивание
+    static constexpr int WheelStep = 120;           // angleDelta одного щелчка колеса
+    static constexpr int ReadyCacheKb = 96 * 1024;  // тайлы в пикселях экрана: ~ два экрана на Retina
 
     // needFix=false — карта доступна и до первой позиции (показывает мир)
     explicit MapView(QWidget *parent = nullptr, bool needFix = true, const TileSource &source = tiles::osm());
@@ -72,7 +74,9 @@ protected:
     QList<QPushButton *> m_buttons;  // столбец справа сверху
 
 private:
-    QPointF origin() const;  // мировые пиксели левого верхнего угла виджета
+    // Мировые пиксели левого верхнего угла виджета, по сетке пикселей экрана: тайлы ложатся
+    // в целые пиксели и рисуются копированием, без пересэмплирования
+    QPointF origin() const;
     bool ready() const { return m_pos.has_value() || !m_needFix; }
     // anchor — экранная точка, которая остаётся на месте (курсор); без неё — центр
     void setZoom(int z, std::optional<QPointF> anchor = std::nullopt);
@@ -81,6 +85,8 @@ private:
     void paintTiles(QPainter &p);
     // Тайл (z, x, y) в прямоугольник target; false — его ещё нет
     bool drawTile(QPainter &p, const QRectF &target, int z, int x, int y, QSet<QString> *wanted);
+    // Тайл в размере target в пикселях экрана: масштабируется один раз и хранится в m_ready
+    QPixmap readyTile(int z, int x, int y, const QPixmap &pm, const QRectF &target);
     // Пока тайла нет — растянутый кусок тайла уровнем ниже из кэша
     void drawFallback(QPainter &p, const QRectF &target, int z, int x, int y);
 
@@ -92,4 +98,5 @@ private:
     std::optional<QPointF> m_dragLast;
     std::optional<QPointF> m_pressAt;
     TileLoader *m_tiles = nullptr;
+    QCache<QString, QPixmap> m_ready{ReadyCacheKb};  // готовые к копированию тайлы; стоимость — КБ
 };

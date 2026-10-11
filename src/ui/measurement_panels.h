@@ -12,6 +12,7 @@
 #include <optional>
 
 class QLabel;
+class ValueLabel;
 class QLineEdit;
 class QPushButton;
 
@@ -53,7 +54,7 @@ signals:
     void clearRequested();
 
 private:
-    QList<QLabel *> m_labels;
+    QList<ValueLabel *> m_labels;
     QPushButton *m_save;
 };
 

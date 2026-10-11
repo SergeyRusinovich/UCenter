@@ -89,6 +89,7 @@ qt_add_executable(UCenter WIN32 MACOSX_BUNDLE
     src/ui/style.cpp
     src/ui/theme.cpp
     src/ui/tile_loader.cpp
+    src/ui/value_label.cpp
     $<$<PLATFORM_ID:Darwin>:${UCENTER_ICNS}>
     $<$<PLATFORM_ID:Windows>:${PROJECT_SOURCE_DIR}/resources/ucenter.rc>
 )

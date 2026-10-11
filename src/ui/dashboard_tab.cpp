@@ -5,6 +5,7 @@
 #include "ui/compass_view.h"
 #include "ui/map_view.h"
 #include "ui/style.h"
+#include "ui/value_label.h"
 
 #include <QComboBox>
 #include <QGridLayout>
@@ -75,7 +76,7 @@ QGroupBox *DashboardTab::buildValues()
     auto *box = new QGroupBox(tr("Data View"));
     auto *grid = new QGridLayout(box);
     for (int i = 0; i < fields().size(); ++i) {
-        QLabel *val = style::roleLabel(fmt::Empty, "value");
+        auto *val = new ValueLabel;
         grid->addWidget(style::roleLabel(tr(fields()[i].first), "caption"), i, 0);
         grid->addWidget(val, i, 1);
         m_labels.append(val);
@@ -99,7 +100,7 @@ QGroupBox *DashboardTab::buildTimeCorrection()
         QSettings().setValue(QLatin1String(OffsetSetting), m_offsetCombo->currentData());
         updateLocalTime();
     });
-    m_localLabel = style::roleLabel(fmt::Empty, "value");
+    m_localLabel = new ValueLabel;
     lay->addWidget(style::roleLabel(tr("Offset"), "caption"), 0, 0);
     lay->addWidget(m_offsetCombo, 0, 1);
     lay->addWidget(style::roleLabel(tr("Local time"), "caption"), 1, 0);
