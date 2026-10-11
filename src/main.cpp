@@ -4,6 +4,7 @@
 #include "ui/style.h"
 
 #include <QApplication>
+#include <QCommandLineParser>
 #include <QIcon>
 
 #include <functional>
@@ -24,9 +25,22 @@ int main(int argc, char *argv[])
     language::apply(app, language::current());
     style::applyTheme(app);
 
+    // Воспроизведение из командной строки — для замеров производительности (docs/roadmap.md, фаза 1)
+    QCommandLineParser args;
+    args.addHelpOption();
+    args.addVersionOption();
+    const QCommandLineOption replayOpt(QStringLiteral("replay"), QStringLiteral("Replay a recording on start."),
+                                       QStringLiteral("file"));
+    const QCommandLineOption speedOpt(QStringLiteral("speed"),
+                                      QStringLiteral("Replay speed, times real time (default 1)."), QStringLiteral("x"),
+                                      QStringLiteral("1"));
+    const QCommandLineOption quitOpt(QStringLiteral("quit-at-end"), QStringLiteral("Quit when the replay ends."));
+    args.addOptions({replayOpt, speedOpt, quitOpt});
+    args.process(app);
+
     // Тексты виджетов задаются при создании, поэтому новый язык применяется к новому окну:
     // оно открывается раньше, чем закрывается старое, иначе приложение завершилось бы
-    std::function<void()> openWindow = [&] {
+    std::function<MainWindow *()> openWindow = [&] {
         auto *win = new MainWindow;
         win->setAttribute(Qt::WA_DeleteOnClose);
         QObject::connect(win, &MainWindow::languageChangeRequested, &app, [&, win](const QString &choice) {
@@ -37,7 +51,10 @@ int main(int argc, char *argv[])
             win->close();
         });
         win->show();
+        return win;
     };
-    openWindow();
+    MainWindow *first = openWindow();
+    if (args.isSet(replayOpt))
+        first->startReplay(args.value(replayOpt), args.value(speedOpt).toDouble(), args.isSet(quitOpt));
     return app.exec();
 }

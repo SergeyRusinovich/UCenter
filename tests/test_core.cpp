@@ -16,6 +16,7 @@
 #include "core/satellites.h"
 #include "core/timeutil.h"
 #include "core/ubx.h"
+#include "recording.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -609,6 +610,29 @@ private slots:
     // ---------- Устойчивость разбора ----------
     // Случайные искажения настоящего потока: разбор не должен падать или читать за границы
     // (смысл проверки — под AddressSanitizer/UBSan; глубокий поиск — fuzz/fuzz_frame_reader.cpp)
+    // Эталонная запись для замеров: каждый кадр разбирается, решение и спутники — как в записи
+    void referenceRecordingDecodes()
+    {
+        const int epochs = 20;
+        const QByteArray raw = recording::reference(epochs);
+        QCOMPARE(raw, recording::reference(epochs));  // детерминированная
+        FrameReader reader;
+        const QList<GnssMessage> msgs = reader.feed(raw);
+        // В эпохе: NAV-PVT, NAV-DOP, NAV-SAT, RMC, GGA, 4 GSA и 3 + 2 + 2 + 2 страницы GSV
+        QCOMPARE(msgs.size(), epochs * 18);
+        NavigationState nav;
+        SatelliteTracker tracker;
+        for (const GnssMessage &msg : msgs) {
+            QVERIFY2(!std::holds_alternative<std::monostate>(msg.data), qPrintable(msg.identity));
+            nav.apply(msg, 0.0);
+            tracker.handle(msg, 0.0);
+        }
+        QCOMPARE(nav.data().fix.value_or(QString()), QStringLiteral("3D"));
+        QVERIFY(std::abs(*nav.data().lat - 55.75) < 0.001 && std::abs(*nav.data().lon - 37.62) < 0.001);
+        QCOMPARE(tracker.snapshot(0.0).sats.size(), 32);
+        QCOMPARE(replayEpochs(msgs).size(), epochs);
+    }
+
     void frameReaderSurvivesMutations()
     {
         const QByteArray seed = ggaAt("092750.000") + QByteArray::fromHex(NavPvtHex) + QByteArray::fromHex(NavSatHex)

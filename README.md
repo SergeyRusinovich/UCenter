@@ -137,6 +137,20 @@ ctest --test-dir build --output-on-failure
 - `test_core` — logic without GUI: geodesy, baseline, storage, place parsing, point rules, NMEA/UBX parsing, navigation solution, satellite tracking, replay pacing, and a parser robustness check on randomly corrupted streams. UBX frames are checked against reference frames produced by pyubx2, which the earlier Python version used.
 - `test_session` (macOS and Linux) — end to end without a receiver: a pseudo-terminal (`openpty`) stands in for the USB port, and the real `ReceiverSession`, reader thread and `QSerialPort` are tested on it: receiving frames, VALSET → ACK, a missing ACK, recording, replay, a port that cannot be opened, reconnecting.
 
+### Benchmarks and profiling
+
+The reference workload is a synthetic 10 Hz stream with every message the app decodes (NAV-PVT, NAV-DOP, NAV-SAT, NMEA RMC, GGA, GSA and GSV) in every epoch. It is generated deterministically by [tests/recording.cpp](tests/recording.cpp) rather than stored in the repository; `test_core` checks that every frame of it decodes.
+
+```bash
+build/bench_core                                   # core benchmarks on 10 minutes of the reference stream
+build/make_recording reference.ubx [epochs]        # the same stream as a file (6000 epochs = 10 minutes)
+
+# Replay it in the app at a chosen speed and quit at the end (for a profiler or `ps -M`)
+build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --speed 4 --quit-at-end
+```
+
+Neither tool is part of `ctest`. The current numbers are in the [roadmap](docs/roadmap.md#baseline-measurements).
+
 ### Sanitizers and fuzzing
 
 ```bash
@@ -192,7 +206,8 @@ resources/                   App icon (SVG source, png, ico, icns) and the Windo
 translations/                ucenter_<language>.ts — translations (ru, es, zh_CN)
 docs/adr/                    Architecture Decision Records
 docs/roadmap.md              Planned improvements and optimizations
-tests/                       test_core (core logic), test_session (port via a pseudo-terminal)
+tests/                       test_core (core logic), test_session (port via a pseudo-terminal),
+                             bench_core and the reference recording generator
 fuzz/                        libFuzzer target for the frame reader and its seed corpus
 tools/                       format.sh, clang_tidy.sh, render_icons/
 src/
