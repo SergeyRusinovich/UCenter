@@ -10,7 +10,11 @@ class CompassView : public QWidget
     Q_OBJECT
 
 public:
+    // Меньшее изменение курса не видно (подпись — в целых градусах, стрелка — меньше пикселя)
+    static constexpr double VisibleDeg = 0.5;
+
     explicit CompassView(QWidget *parent = nullptr);
+    // Перерисовывает, только если изменение заметно
     void setState(bool supported, std::optional<double> heading, std::optional<double> cog);
 
 protected:

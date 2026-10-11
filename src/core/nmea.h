@@ -12,5 +12,8 @@ namespace nmea {
 
 // Строка «$…*hh\r\n» -> сообщение; nullopt — неверный формат или контрольная сумма
 std::optional<GnssMessage> parse(const QByteArray &line);
+// Имя поля с номером index (с нуля, после адреса) по описанию протокола u-blox;
+// для неизвестных предложений и лишних полей — номер с единицы
+QString fieldName(const GnssMessage &msg, qsizetype index);
 
 }  // namespace nmea

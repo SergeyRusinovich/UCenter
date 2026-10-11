@@ -1,12 +1,17 @@
 // Точка входа: мини-аналог u-center для u-blox M9.
+#include "core/cpu_time.h"
 #include "core/language.h"
 #include "ui/main_window.h"
 #include "ui/style.h"
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QElapsedTimer>
+#include <QFile>
 #include <QIcon>
+#include <QTimer>
 
+#include <cstdio>
 #include <functional>
 
 int main(int argc, char *argv[])
@@ -35,8 +40,17 @@ int main(int argc, char *argv[])
                                       QStringLiteral("Replay speed, times real time (default 1)."), QStringLiteral("x"),
                                       QStringLiteral("1"));
     const QCommandLineOption quitOpt(QStringLiteral("quit-at-end"), QStringLiteral("Quit when the replay ends."));
-    args.addOptions({replayOpt, speedOpt, quitOpt});
+    const QCommandLineOption measureOpt(
+        QStringLiteral("measure"),
+        QStringLiteral("Measure CPU load between two moments after start, in seconds, then quit."),
+        QStringLiteral("from,to"));
+    const QCommandLineOption measureOutOpt(
+        QStringLiteral("measure-out"), QStringLiteral("Append the --measure result to this file (default: stderr)."),
+        QStringLiteral("file"));
+    args.addOptions({replayOpt, speedOpt, quitOpt, measureOpt, measureOutOpt});
     args.process(app);
+    QElapsedTimer sinceStart;
+    sinceStart.start();
 
     // Тексты виджетов задаются при создании, поэтому новый язык применяется к новому окну:
     // оно открывается раньше, чем закрывается старое, иначе приложение завершилось бы
@@ -56,5 +70,37 @@ int main(int argc, char *argv[])
     MainWindow *first = openWindow();
     if (args.isSet(replayOpt))
         first->startReplay(args.value(replayOpt), args.value(speedOpt).toDouble(), args.isSet(quitOpt));
+    if (args.isSet(measureOpt)) {
+        // Нагрузка в установившемся режиме: от from до to секунд после запуска, без затрат на сам запуск.
+        // Таймеры срабатывают в GUI-потоке, поэтому cpu_time::thread() — время GUI-потока
+        const QStringList span = args.value(measureOpt).split(u',');
+        const double from = span.value(0).toDouble(), to = span.value(1).toDouble();
+        if (span.size() != 2 || from < 0 || to <= from)
+            args.showHelp(1);
+        struct Sample {
+            double wall, gui, all;
+        };
+        const auto sample = [&sinceStart] {
+            return Sample{double(sinceStart.nsecsElapsed()) * 1e-9, cpu_time::thread(), cpu_time::process()};
+        };
+        auto *start = new Sample(sample());
+        QTimer::singleShot(int(from * 1000), &app, [start, sample] { *start = sample(); });
+        QTimer::singleShot(int(to * 1000), &app, [start, sample, out = args.value(measureOutOpt), first] {
+            const Sample end = sample();
+            const double wall = end.wall - start->wall;
+            const QString line = QStringLiteral("tab=%1 gui_thread=%2% all_threads=%3% span=%4s\n")
+                                     .arg(first->currentTab())
+                                     .arg(100 * (end.gui - start->gui) / wall, 0, 'f', 1)
+                                     .arg(100 * (end.all - start->all) / wall, 0, 'f', 1)
+                                     .arg(wall, 0, 'f', 1);
+            QFile file(out);
+            if (!out.isEmpty() && file.open(QIODevice::Append | QIODevice::Text))
+                file.write(line.toUtf8());
+            else
+                fputs(qPrintable(line), stderr);
+            delete start;
+            QCoreApplication::quit();
+        });
+    }
     return app.exec();
 }

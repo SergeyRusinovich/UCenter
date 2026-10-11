@@ -150,6 +150,11 @@ void MainWindow::startReplay(const QString &path, double speed, bool quitAtEnd)
     m_session->openReplay(path, speed);
 }
 
+QString MainWindow::currentTab() const
+{
+    return m_tabs->currentWidget()->metaObject()->className();
+}
+
 void MainWindow::connectPort(const QString &port, int baudrate)
 {
     m_connection->setBusy();

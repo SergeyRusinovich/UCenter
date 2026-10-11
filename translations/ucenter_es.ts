@@ -244,6 +244,14 @@ La frecuencia, las constelaciones y la salida de mensajes volverán a sus valore
         <source>Clear</source>
         <translation>Borrar</translation>
     </message>
+    <message>
+        <source>Copy</source>
+        <translation>Copiar</translation>
+    </message>
+    <message>
+        <source>Select a message to see its fields</source>
+        <translation>Seleccione un mensaje para ver sus campos</translation>
+    </message>
 </context>
 <context>
     <name>ConstellationFilters</name>

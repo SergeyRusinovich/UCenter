@@ -212,9 +212,9 @@ QString number(double v)
     return QString::number(v, 'g', 10);
 }
 
-QString describeNavPvt(const NavPvt &p)
+QList<std::pair<const char *, QString>> navPvtFields(const NavPvt &p)
 {
-    const QList<std::pair<const char *, QString>> fields = {
+    return {
         {"iTOW", QString::number(p.iTow)},
         {"year", QString::number(p.year)},
         {"month", QString::number(p.month)},
@@ -247,8 +247,12 @@ QString describeNavPvt(const NavPvt &p)
         {"pDOP", number(p.pDop)},
         {"headVeh", number(p.headVeh)},
     };
+}
+
+QString describeNavPvt(const NavPvt &p)
+{
     QStringList parts{QStringLiteral("NAV-PVT")};
-    for (const auto &[name, value] : fields)
+    for (const auto &[name, value] : navPvtFields(p))
         parts << QLatin1String(name) + u'=' + value;
     return parts.join(QStringLiteral(", "));
 }
@@ -420,6 +424,47 @@ QString describe(const GnssMessage &msg)
         body = QStringLiteral("%1, length=%2").arg(msg.identity).arg(msg.raw.size() - FrameOverhead);
     }
     return QStringLiteral("<UBX(%1)>").arg(body);
+}
+
+QList<std::pair<QString, QString>> fields(const GnssMessage &msg)
+{
+    QList<std::pair<QString, QString>> out;
+    const auto add = [&out](const QString &name, const QString &value) { out.append({name, value}); };
+    if (const auto *pvt = msg.get<NavPvt>()) {
+        for (const auto &[name, value] : navPvtFields(*pvt))
+            add(QLatin1String(name), value);
+    } else if (const auto *sat = msg.get<NavSat>()) {
+        add(QStringLiteral("iTOW"), QString::number(sat->iTow));
+        add(QStringLiteral("numSvs"), QString::number(sat->svs.size()));
+        for (const NavSatSv &sv : sat->svs) {
+            add(QStringLiteral("%1%2").arg(QLatin1Char(sv.sys)).arg(sv.svid),
+                QStringLiteral("cno=%1 elev=%2 azim=%3%4")
+                    .arg(sv.cno.value_or(0))
+                    .arg(sv.elv ? QString::number(*sv.elv) : QStringLiteral("?"))
+                    .arg(sv.az ? QString::number(*sv.az) : QStringLiteral("?"))
+                    .arg(sv.used ? QStringLiteral(" used") : QString()));
+        }
+    } else if (const auto *dop = msg.get<NavDop>()) {
+        add(QStringLiteral("iTOW"), QString::number(dop->iTow));
+        for (const auto &[name, value] :
+             {std::pair{"gDOP", dop->gDop}, std::pair{"pDOP", dop->pDop}, std::pair{"tDOP", dop->tDop},
+              std::pair{"vDOP", dop->vDop}, std::pair{"hDOP", dop->hDop}, std::pair{"nDOP", dop->nDop},
+              std::pair{"eDOP", dop->eDop}})
+            add(QLatin1String(name), number(value));
+    } else if (const auto *ack = msg.get<Ack>()) {
+        add(QStringLiteral("clsID"), className(ack->cls));
+        add(QStringLiteral("msgID"), messageName(ack->cls, ack->id));
+    } else if (const auto *valget = msg.get<Valget>()) {
+        const QByteArray p = msg.payload();
+        add(QStringLiteral("version"), QString::number(u1(p, 0)));
+        add(QStringLiteral("layer"), QString::number(valget->layer));
+        add(QStringLiteral("position"), QString::number(u2(p, 2)));
+        for (auto it = valget->values.cbegin(); it != valget->values.cend(); ++it)
+            add(receiver_config::keyName(it.key()), QString::number(it.value()));
+    } else if (msg.cls == 0x04) {
+        add(QStringLiteral("msgContent"), QString::fromLatin1(msg.payload()));
+    }
+    return out;
 }
 
 }  // namespace ubx

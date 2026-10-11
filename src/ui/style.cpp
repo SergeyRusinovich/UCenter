@@ -124,10 +124,11 @@ QSlider::handle:horizontal {
 }
 
 /* Консоль и полосы прокрутки */
-QPlainTextEdit#console {
+QPlainTextEdit#console, QListView#console {
     background: $console; border: 1px solid $border; border-radius: 10px; padding: 6px;
     selection-background-color: $accent_soft; selection-color: $text;
 }
+QListView#console { outline: 0; }
 QScrollBar:vertical { background: transparent; width: 10px; margin: 2px; }
 QScrollBar:horizontal { background: transparent; height: 10px; margin: 2px; }
 QScrollBar::handle:vertical { background: $scroll; border-radius: 3px; min-height: 30px; }

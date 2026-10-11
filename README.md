@@ -50,7 +50,7 @@ The picture at the top is the <b>Dashboard</b>: position, UTC and local time, fi
 
 - **Connection panel** – auto-detects ports (`/dev/cu.usbmodem*` on macOS), selectable baud rate (9600 / 38400 / 115200), connect/disconnect button, status indicator and session uptime. The last port and baud rate are remembered.
 - **Recording and replay** – **● Record…** saves the raw stream from the receiver to a `.ubx` file (every byte as received). **▶ From file…** plays a recording back instead of a receiver, at the original epoch pace, so every tab works without hardware. See [Recording and replay](#recording-and-replay).
-- **Console** – read-only live stream of raw NMEA and decoded UBX messages with _Freeze_, _NMEA only_ and _UBX only_ filters and auto-scroll.
+- **Console** – live stream of raw NMEA and decoded UBX messages, the last 50 000 kept. _NMEA only_ and _UBX only_ filter the whole history at once, _Freeze_ stops new lines. Selecting a line shows every field of the message below the list (named NMEA fields, decoded UBX fields, the frame in hex); rows can be copied. The list follows new lines while it is scrolled to the end and nothing is selected; Esc clears the selection.
 - **Dashboard** – latitude, longitude, altitude, UTC time, fix type (No Fix, 2D, 3D, GNSS+DGNSS), PDOP/HDOP, number of satellites used, speed and course; local time with a selectable UTC offset; a compass (vehicle heading when the receiver provides it, course over ground otherwise) and an OpenStreetMap map with the current position.
 - **Satellites** – sky plot (azimuth/elevation), per-satellite C/N0 bar chart, per-constellation filters with used/visible counters. Outline colors: blue = tracked but not used in the solution, red = not tracked. Data comes from `UBX-NAV-SAT` when it is enabled, otherwise from NMEA GSV/GSA.
 - **Azimuth** – satellite map for measuring a baseline A→B: azimuth and deviation from true north, distance and offsets, with place search, saved measurements and CSV export. See [Azimuth tab](#azimuth-tab).
@@ -145,11 +145,15 @@ The reference workload is a synthetic 10 Hz stream with every message the app de
 build/bench_core                                   # core benchmarks on 10 minutes of the reference stream
 build/make_recording reference.ubx [epochs]        # the same stream as a file (6000 epochs = 10 minutes)
 
-# Replay it in the app at a chosen speed and quit at the end (for a profiler or `ps -M`)
+# Replay it in the app at a chosen speed and quit at the end (for a profiler)
 build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --speed 4 --quit-at-end
+
+# CPU load in the steady state: GUI thread and all threads between the 20th and 80th second, appended to a file
+build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --measure 20,80 --measure-out load.txt
+build\Release\UCenter.exe --replay reference.ubx --measure 20,80 --measure-out load.txt     # Windows
 ```
 
-Neither tool is part of `ctest`. The current numbers are in the [roadmap](docs/roadmap.md#baseline-measurements).
+The tab that is open is the one measured (the last tab used). Neither tool is part of `ctest`. The current numbers are in the [roadmap](docs/roadmap.md#baseline-measurements).
 
 ### Sanitizers and fuzzing
 
@@ -215,7 +219,8 @@ src/
   core/                      No widgets; QtCore (thread, signals, timer), QtSerialPort and QtPositioning only
     ports                    Serial port discovery
     message_types            Decoded message contents: GGA/GSA/RMC/GSV, NAV-PVT/SAT/DOP, ACK, CFG-VALGET
-    messages                 GnssMessage: one NMEA or UBX frame, decoded once on arrival; console text
+    messages                 GnssMessage: one NMEA or UBX frame, decoded once on arrival; console text and fields
+    message_log              MessageLog: console history (ring buffer) and its NMEA/UBX filter
     nmea                     NMEA: checksum, sentence split, decoding
     ubx                      UBX: frames, checksum, message names, decoding, VALSET/VALGET/CFG-CFG building
     frame_reader             Byte stream -> NMEA and UBX frames (skips garbage and bad checksums)
@@ -235,10 +240,12 @@ src/
     places                   Place search results: Nominatim parsing, merging segments, sorting by distance
     host_location            HostLocation: this computer's location (QtPositioning + location permission)
     language                 Supported languages, the saved choice (English by default), installing translators
+    cpu_time                 CPU time of the calling thread and of the process (for --measure)
   ui/
     main_window              MainWindow: composition and signal wiring, window state, language list
     connection_panel         ConnectionPanel: port, record, replay (port list provider is injected)
-    console_tab              ConsoleTab
+    console_tab              ConsoleTab: message list with filters, fields of the selected message
+    console_model            ConsoleModel: list model over MessageLog, text built only for visible rows
     dashboard_tab            DashboardTab: formats NavData for display
     compass_view             CompassView
     satellites_tab           Satellites tab with filters
@@ -258,6 +265,7 @@ src/
     geocoder                 PlaceSearch: Nominatim requests (Russian, 1 request/s)
     network                  Shared User-Agent and request setup for map services
     painting                 Shared drawing helpers
+    value_label              ValueLabel: a value that changes often without relayouting the window
     theme                    Satellite colors
     style                    App look: light/dark palettes following the OS, system accent color, QSS
     assets/                  SVG icons used by the stylesheet (combo arrow, checkmark), compiled into resources
@@ -314,7 +322,7 @@ AzimuthTab --expandChanged--> MainWindow (hides the connection panel)
 - Writes to the receiver are queued to the reader thread without waiting, so a stuck USB device cannot freeze the UI; a write the receiver does not take within 2 seconds is reported and dropped. On disconnect the reader thread gets 3 seconds to stop; a thread stuck in the port driver is detached instead of being destroyed while running.
 - The frame reader accepts NMEA sentences only with a valid `*hh` checksum and UBX frames only with a valid Fletcher checksum; anything else is skipped byte by byte until the next frame starts.
 - The UI uses the Fusion style on every platform plus a stylesheet from `src/ui/style.cpp`, so it looks the same on macOS and Windows. The light or dark palette follows the system setting and switches live; the accent color is taken from the OS. Widgets do not set inline styles: they use object names (`console`, `statusLed`, `mapButton`) and the dynamic properties `role` and `variant`, which the stylesheet targets.
-- Incoming messages only update the models; the Dashboard and the console are redrawn by a 100 ms timer. The console keeps the last 5000 messages and turns them into text only when its tab is visible, in one batch.
+- Incoming messages only update the models; the Dashboard is refreshed by a 100 ms timer, the console takes new messages in one batch at most 4 times a second. The console keeps the last 50 000 messages and builds the text of a line only when the list shows it. Painting, not computation, is what costs CPU (see the [baseline measurements](docs/roadmap.md#baseline-measurements)): the map is opaque and repaints only when the marker moves by a device pixel, tiles are cached at the device pixel size, and values that change several times a second are `ValueLabel`s, so a new value does not relayout the window.
 - Settings kept between runs (QSettings): interface language, window size and tab, port and baud rate, UTC offset, console filters, imagery provider, the Azimuth map view and splitter, the recording folder.
 - `UBX-NAV-PVT`, when present, is the primary source for position, time, fix type, PDOP and satellite count; NMEA GGA/GSA/RMC are used only when NAV-PVT has not been received for 2 seconds. HDOP comes from GGA or `UBX-NAV-DOP`.
 - `UBX-NAV-SAT`, when present, is the source for satellites: each message is the full list of the epoch with an explicit "used" flag. Without it satellites come from NMEA: "used in navigation" from GSA, SBAS recognized by PRN ranges 33–64 and 120–158 under the GP talker. Satellites that stop appearing for 5 seconds are removed. If a satellite is reported on several signals (NMEA 4.10+ `signalID`), the best C/N0 of the current epoch is shown; a signal with an empty C/N0 counts as not tracked.
