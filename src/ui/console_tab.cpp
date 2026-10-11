@@ -76,8 +76,11 @@ void ConsoleTab::appendMessage(const GnssMessage &msg)
 
 void ConsoleTab::flush()
 {
-    if (m_pending.isEmpty() || !isVisible())
+    if (m_pending.isEmpty() || !isVisible() || window()->isMinimized())
         return;
+    if (m_lastFlush.isValid() && m_lastFlush.elapsed() < FlushIntervalMs)
+        return;
+    m_lastFlush.start();
     QStringList lines;
     lines.reserve(m_pending.size());
     for (const GnssMessage &msg : std::as_const(m_pending))

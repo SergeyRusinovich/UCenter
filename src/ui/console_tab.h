@@ -3,6 +3,7 @@
 
 #include "core/messages.h"
 
+#include <QElapsedTimer>
 #include <QList>
 #include <QWidget>
 
@@ -15,11 +16,13 @@ class ConsoleTab : public QWidget
 
 public:
     static constexpr int MaxLines = 5000;  // ограничиваем память
+    // Компоновка и отрисовка текста дороже самих данных: выводим не чаще 4 раз в секунду
+    static constexpr int FlushIntervalMs = 250;
 
     explicit ConsoleTab(QWidget *parent = nullptr);
 
     void appendMessage(const GnssMessage &msg);
-    // Выводит накопленные строки; пока вкладка скрыта, сообщения только копятся
+    // Выводит накопленные строки; пока вкладка скрыта или окно свёрнуто, сообщения только копятся
     void flush();
 
 private:
@@ -33,4 +36,5 @@ private:
     // Сообщения копятся здесь, а в текст превращаются в flush() — только те, что будут показаны,
     // и одной вставкой вместо сотен в секунду
     QList<GnssMessage> m_pending;
+    QElapsedTimer m_lastFlush;
 };

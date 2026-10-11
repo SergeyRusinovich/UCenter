@@ -25,6 +25,9 @@ MapView::MapView(QWidget *parent, bool needFix, const TileSource &source)
     , m_zoom(needFix ? FixZoom : MinZoom)
 {
     setMinimumSize(320, 260);
+    // Карта сама заливает весь свой прямоугольник: без этого флага каждая её перерисовка
+    // перерисовывает под ней и все родительские виджеты, вплоть до окна
+    setAttribute(Qt::WA_OpaquePaintEvent);
     resetTiles(source);
     auto *zoomIn = makeButton(QStringLiteral("+"), [this] { setZoom(m_zoom + 1); });
     auto *zoomOut = makeButton(QStringLiteral("−"), [this] { setZoom(m_zoom - 1); });
@@ -50,9 +53,16 @@ void MapView::setPosition(std::optional<double> lat, std::optional<double> lon)
         return;
     if (!m_pos && m_follow)
         m_zoom = std::max(m_zoom, int(FixZoom));
+    // Маркер не сдвинулся на экране хотя бы на пиксель, вид тот же — перерисовывать нечего
+    const qreal dpr = devicePixelRatioF();
+    const auto devicePx = [dpr](QPointF pt) { return QPoint(qRound(pt.x() * dpr), qRound(pt.y() * dpr)); };
+    const std::optional<QPoint> markerBefore = m_pos ? std::optional(devicePx(toScreen(*m_pos))) : std::nullopt;
+    const QPointF originBefore = origin();
     m_pos = pos;
     if (m_follow)
         m_center = pos;
+    if (markerBefore && *markerBefore == devicePx(toScreen(pos)) && origin() == originBefore)
+        return;
     update();
 }
 
@@ -67,6 +77,7 @@ void MapView::setSource(const TileSource &source)
 
 void MapView::resetTiles(const TileSource &source)
 {
+    m_ready.clear();  // ключи тайлов не различают источники
     m_tiles = new TileLoader(source, this);
     connect(m_tiles, &TileLoader::tileLoaded, this, qOverload<>(&QWidget::update));
 }
@@ -115,7 +126,9 @@ LatLon MapView::toGeo(const QPointF &pt) const
 
 QPointF MapView::origin() const
 {
-    return geo::llToPx(m_center.lat, m_center.lon, m_zoom) - QPointF(width() / 2.0, height() / 2.0);
+    const QPointF o = geo::llToPx(m_center.lat, m_center.lon, m_zoom) - QPointF(width() / 2.0, height() / 2.0);
+    const qreal dpr = devicePixelRatioF();
+    return QPointF(std::round(o.x() * dpr) / dpr, std::round(o.y() * dpr) / dpr);
 }
 
 // ---------- Управление ----------
@@ -266,16 +279,29 @@ void MapView::paintTiles(QPainter &p)
                 drawFallback(p, target, z, x, y);
             continue;
         }
-        // Под дочерними — сам тайл из кэша или растянутый предок
-        if (const QPixmap whole = m_tiles->cached(z, x, y); !whole.isNull())
-            p.drawPixmap(target, whole, QRectF(whole.rect()));
-        else
-            drawFallback(p, target, z, x, y);
         const QSizeF half(TileSize / 2.0, TileSize / 2.0);
-        for (int dy = 0; dy < 2; ++dy)
-            for (int dx = 0; dx < 2; ++dx)
-                drawTile(p, QRectF(target.topLeft() + QPointF(dx * half.width(), dy * half.height()), half), z + 1,
-                         2 * x + dx, 2 * y + dy, &wanted);
+        QPixmap kids[4];
+        bool allKids = true;
+        for (int i = 0; i < 4; ++i) {
+            const int dx = i % 2, dy = i / 2;
+            wanted.insert(tiles::key(z + 1, 2 * x + dx, 2 * y + dy));
+            kids[i] = m_tiles->tile(z + 1, 2 * x + dx, 2 * y + dy);
+            allKids = allKids && !kids[i].isNull();
+        }
+        // Под дочерними, пока они не все на месте, — сам тайл из кэша или растянутый предок
+        if (!allKids) {
+            if (const QPixmap whole = m_tiles->cached(z, x, y); !whole.isNull())
+                p.drawPixmap(target.topLeft(), readyTile(z, x, y, whole, target));
+            else
+                drawFallback(p, target, z, x, y);
+        }
+        for (int i = 0; i < 4; ++i) {
+            if (kids[i].isNull())
+                continue;
+            const int dx = i % 2, dy = i / 2;
+            const QRectF part(target.topLeft() + QPointF(dx * half.width(), dy * half.height()), half);
+            p.drawPixmap(part.topLeft(), readyTile(z + 1, 2 * x + dx, 2 * y + dy, kids[i], part));
+        }
     }
     m_tiles->retain(wanted);
 }
@@ -286,8 +312,23 @@ bool MapView::drawTile(QPainter &p, const QRectF &target, int z, int x, int y, Q
     const QPixmap pm = m_tiles->tile(z, x, y);
     if (pm.isNull())
         return false;
-    p.drawPixmap(target, pm, QRectF(pm.rect()));
+    p.drawPixmap(target.topLeft(), readyTile(z, x, y, pm, target));
     return true;
+}
+
+QPixmap MapView::readyTile(int z, int x, int y, const QPixmap &pm, const QRectF &target)
+{
+    const qreal dpr = devicePixelRatioF();
+    const int side = qRound(target.width() * dpr);
+    const QString key = tiles::key(z, x, y) + u'@' + QString::number(side);
+    if (const QPixmap *ready = m_ready.object(key))
+        return *ready;
+    // Пиксели тайла совпадают с пикселями экрана: QPainter копирует его без масштабирования
+    QPixmap out =
+        pm.width() == side ? pm.copy() : pm.scaled(side, side, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    out.setDevicePixelRatio(dpr);
+    m_ready.insert(key, new QPixmap(out), int(qint64(side) * side * 4 / 1024));
+    return out;
 }
 
 void MapView::drawFallback(QPainter &p, const QRectF &target, int z, int x, int y)

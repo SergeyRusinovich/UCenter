@@ -54,15 +54,32 @@ macOS 26.6, Apple M1 Pro, Release build, 11 October 2026. Windows has not been m
 
 **Conclusions.** The cost is in painting, not in computation. The models are four orders of magnitude below the 100 ms epoch budget, so moving them to the reader thread ([0018](adr/0018-receiver-model-in-reader-thread.md)) would not be noticeable — that record is rejected. Hidden tabs cost nothing measurable (the Satellites row), so refreshing only the visible tab is not needed. Phases 2 and 3 are re-planned around the map and the console.
 
-## Phase 2 — Cheaper painting
+## Phase 2 — Cheaper painting ✅ done
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 2.1 | Map: keep tiles ready at the device pixel size (scaled once when loaded or when the zoom changes), so painting is a plain copy | Dashboard at 1×: the thread pool is idle and all threads together stay under 10 % | M |
-| 2.2 | Map: repaint only when the marker moves by at least one device pixel or the view changes | Dashboard GUI thread at 1× under 5 % | S |
-| 2.3 | Console: refresh the text at most 4 times a second, and not while the window is minimized | Console GUI thread at 1× under 7 % | S |
+| 2.1 | ✅ Map: tiles kept at the device pixel size in a cache (`MapView::readyTile`) and the map origin snapped to device pixels, so painting is a plain copy; the parent tile is no longer drawn under four loaded children | Dashboard at 1×: the thread pool is idle and all threads together stay under 10 % — **met, 9.9 %** | M |
+| 2.2 | ✅ Map: repaint only when the marker moves by at least one device pixel or the view changes | Dashboard GUI thread at 1× under 5 % — **not met, 7.7 %** (see below) | S |
+| 2.3 | ✅ Console: refresh the text at most 4 times a second, and not while the window is minimized | Console GUI thread at 1× under 7 % — **not met, 8.6 %**; the rest is text layout in `QPlainTextEdit`, which 3.1 replaces | S |
 
-Not planned any more, after the measurements: batching the per-frame signal, refreshing only the visible tab and `ReceiverModel` in the reader thread (formerly 2.1–2.3).
+Two causes that were not in the plan turned up while measuring, both making every map update repaint the whole window:
+
+- `MapView` was not marked opaque, so each of its repaints also repainted every parent widget under it, up to the main window. It now sets `Qt::WA_OpaquePaintEvent`.
+- Changing the text of a `QLabel` asks the layout for a new size, and the request travels up to `QMainWindow`, which then repainted the whole window — 16 times a second, about 820 000 pixels each time. Values that change several times a second (Dashboard, the azimuth result) are now a `ValueLabel`, whose size does not depend on its text. With that, the map repaints 2.7 times a second instead of 10.7, i.e. only when the marker actually moves.
+
+### Phase 2 results
+
+Steady state: CPU time between the 20th and the 80th second of a replay of the reference stream, so start-up is excluded. Same machine as the baseline; "before" is `main` before phase 2, measured the same way. The phase 1 table above averaged over the whole run including start-up, which is why its numbers differ slightly.
+
+| Open tab | Speed | Before: GUI thread / all threads | After: GUI thread / all threads |
+|---|---|---|---|
+| Dashboard | 1× | 15.8 % / 35.2 % | **7.7 % / 9.9 %** |
+| Dashboard | 4× | 17.8 % / 41.4 % | 12.9 % / 17.8 % |
+| Console | 1× | 17.0 % / 17.1 % | **8.6 % / 8.8 %** |
+| Console | 4× | 22.9 % / 23.0 % | 13.2 % / 13.5 % |
+| Satellites | 1× | 2.4 % / 2.5 % | 2.3 % / 2.5 % |
+
+The map also looks better: with the origin on device pixels, the thin seams between tiles that were visible on Retina screens are gone.
 
 ## Phase 3 — Interface
 
@@ -71,6 +88,7 @@ Not planned any more, after the measurements: batching the per-frame signal, ref
 | 3.1 | Console as a model and view: a ring buffer of `GnssMessage` in a `QAbstractListModel`, a `QListView` with uniform row heights, filters and freeze as a proxy model; text shaped only for visible rows | Filter switching is instant with a full buffer; the buffer can be raised from 5 000 to 50 000 messages; Console at 1× no slower than after 2.3 | M |
 | 3.2 | Console details: selecting a row shows the decoded fields of the message | Works for every type in `message_types.h` | M |
 | 3.3 | Measure on Windows: repeat 1.3 there and add the numbers to the table | The table has a Windows row for each tab | S |
+| 3.4 | Dashboard: repaint the compass only when the heading or course changes by a visible amount; find what else keeps the GUI thread at 7.7 % | Dashboard GUI thread at 1× under 5 % (the target 2.2 missed) | S |
 
 Dropped: decoding map tiles in a thread pool — decoding does not appear in the profile.
 

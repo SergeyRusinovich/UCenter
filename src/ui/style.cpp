@@ -148,7 +148,7 @@ QHeaderView::section {
 QTableCornerButton::section { background: $window; border: none; }
 
 /* Текстовые роли */
-QLabel[role="value"] { font-size: 14px; font-weight: 600; }
+QLabel[role="value"], ValueLabel, QGroupBox ValueLabel { font-size: 14px; font-weight: 600; }
 QLabel[role="caption"] { color: $muted; }
 QLabel[role="section"] { font-weight: 600; }
 

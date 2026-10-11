@@ -2,6 +2,7 @@
 
 #include "core/format.h"
 #include "ui/style.h"
+#include "ui/value_label.h"
 
 #include <QDoubleValidator>
 #include <QGridLayout>
@@ -128,7 +129,7 @@ ResultPanel::ResultPanel(QWidget *parent)
 {
     auto *grid = new QGridLayout(this);
     for (int i = 0; i < results().size(); ++i) {
-        QLabel *val = style::roleLabel(fmt::Empty, "value");
+        auto *val = new ValueLabel;
         grid->addWidget(style::roleLabel(tr(results()[i].first), "caption"), i, 0);
         grid->addWidget(val, i, 1);
         m_labels.append(val);
