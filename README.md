@@ -145,6 +145,18 @@ Select the port (for example `/dev/cu.usbmodem1301`; the number depends on the U
 
 ## Development
 
+### Presets and VS Code
+
+[CMakePresets.json](CMakePresets.json) has the presets `debug` (`build-debug/`), `release` (`build/`, warnings as errors, as in CI) and `asan` (`build-asan/`):
+
+```bash
+cmake --preset debug && cmake --build --preset debug --parallel && ctest --preset debug
+```
+
+Local settings, such as `CMAKE_PREFIX_PATH` for a Qt that CMake does not find on its own, go into an untracked `CMakeUserPresets.json` that inherits a preset.
+
+[.vscode/](.vscode) has build, test, format and clang-tidy tasks (Cmd+Shift+B builds Debug) and debug configurations: `UCenter`, `UCenter: replay` (the app without a receiver, on the reference recording that the task creates as `build-debug/reference.ubx`), `test_core` and `test_session`. On macOS and Linux they use CodeLLDB; on Windows the MSVC debugger, with `QT_ROOT_DIR` set to the Qt directory (for example `C:\Qt\6.8.3\msvc2022_64`) so the app finds the Qt DLLs. VS Code suggests the extensions it needs when the folder is opened.
+
 ### Tests
 
 ```bash
@@ -223,6 +235,8 @@ The code is split into a GUI-independent core and a thin UI layer. Dependencies 
 
 ```
 CMakeLists.txt               Build: ucenter_core, UCenter (app bundle), tests, fuzzer, install/CPack
+CMakePresets.json            Presets debug / release / asan for the command line and IDEs
+.vscode/                     VS Code: build and test tasks, debug configurations, recommended extensions
 cmake/                       Info.plist template, version from git, macOS signing and entitlements
 resources/                   App icon (SVG source, png, ico, icns) and the Windows resource file
 translations/                ucenter_<language>.ts — translations (ru, es, zh_CN)

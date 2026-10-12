@@ -1,0 +1,26 @@
+{
+  // CMake Tools работает по CMakePresets.json и отдаёт C/C++ флаги компиляции (пути к заголовкам Qt)
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  // Пока в CMake Tools не выбран пресет, флаги берутся из сборки пресета debug (задача «Configure: Debug»)
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build-debug/compile_commands.json",
+  "C_Cpp.default.cppStandard": "c++20",
+  // Стиль — .clang-format; в CI проверяет clang-format 19 (tools/format.sh --check)
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_style": "file",
+  "files.associations": {
+    // Файлы Qt Linguist — XML, а не TypeScript
+    "*.ts": "xml",
+    "*.plist.in": "xml",
+    "*.entitlements": "xml"
+  },
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.exclude": {
+    "build*/": true
+  },
+  "search.exclude": {
+    "build*/": true
+  }
+}

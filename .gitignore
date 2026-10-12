@@ -4,6 +4,11 @@ build-*/
 CMakeUserPresets.json
 
 # IDE / OS
-.vscode/
+# Общие настройки VS Code — в репозитории, остальное локальное
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 .DS_Store

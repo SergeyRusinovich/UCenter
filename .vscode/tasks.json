@@ -1,0 +1,81 @@
+{
+  // Задачи вызывают cmake с пресетами из CMakePresets.json напрямую — не зависят от выбранного в CMake Tools пресета.
+  // Cmd+Shift+B — сборка Debug; остальное — Terminal → Run Task.
+  "version": "2.0.0",
+  "options": { "cwd": "${workspaceFolder}" },
+  "tasks": [
+    {
+      "label": "Configure: Debug",
+      "type": "shell",
+      "command": "cmake --preset debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: Debug",
+      "type": "shell",
+      "command": "cmake --build --preset debug --parallel",
+      "dependsOn": "Configure: Debug",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" },
+      "windows": { "problemMatcher": "$msCompile" }
+    },
+    {
+      "label": "Build: Release",
+      "type": "shell",
+      "command": "cmake --preset release && cmake --build --preset release --parallel",
+      "group": "build",
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" },
+      "windows": { "problemMatcher": "$msCompile" }
+    },
+    {
+      "label": "Test: Debug",
+      "type": "shell",
+      "command": "ctest --preset debug",
+      "dependsOn": "Build: Debug",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: ASan + UBSan",
+      "type": "shell",
+      "command": "cmake --preset asan && cmake --build --preset asan --parallel && ctest --preset asan",
+      "group": "test",
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" }
+    },
+    {
+      // Эталонная запись для запуска приложения без приёмника (конфигурация «UCenter: replay» в launch.json)
+      "label": "Make reference recording",
+      "type": "shell",
+      "command": "build-debug/make_recording build-debug/reference.ubx",
+      "windows": { "command": "build-debug\\Debug\\make_recording.exe build-debug\\reference.ubx" },
+      "dependsOn": "Build: Debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Update translations",
+      "type": "shell",
+      "command": "cmake --build --preset debug --target update_translations",
+      "dependsOn": "Configure: Debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "Format",
+      "type": "shell",
+      "command": "tools/format.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Format: check",
+      "type": "shell",
+      "command": "tools/format.sh --check",
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" }
+    },
+    {
+      "label": "clang-tidy",
+      "type": "shell",
+      "command": "tools/clang_tidy.sh build-debug",
+      "dependsOn": "Configure: Debug",
+      "problemMatcher": { "base": "$gcc", "fileLocation": "absolute" }
+    }
+  ]
+}
