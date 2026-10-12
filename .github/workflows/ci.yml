@@ -138,9 +138,20 @@ jobs:
           git diff --exit-code -- translations/
 
   tidy:
-    name: clang-tidy (Linux)
+    # Анализ — самая долгая проверка: файлы поделены на три параллельные задачи
+    name: clang-tidy ${{ matrix.part }} (Linux)
     runs-on: ubuntu-24.04
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: core
+            files: src/core/.*
+          - part: ui
+            files: src/ui/.*
+          - part: tests
+            files: (src/main|tests/.*|fuzz/.*)
     env:
       CC: clang
       CXX: clang++
@@ -167,7 +178,7 @@ jobs:
           CLANG_TIDY: clang-tidy-19
           RUN_CLANG_TIDY: run-clang-tidy-19
         run: |
-          if ! tools/clang_tidy.sh build > tidy.log 2>&1; then
+          if ! tools/clang_tidy.sh build '${{ matrix.files }}' > tidy.log 2>&1; then
             cat tidy.log
             echo "::error title=clang-tidy::$(grep -E 'warning:|error:' tidy.log | sort -u | head -30 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
             exit 1
