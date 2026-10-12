@@ -104,12 +104,38 @@ jobs:
           xcrun stapler staple "$dmg"
           spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
 
+      - name: Install and uninstall the MSI (Windows)
+        # Чистая Windows раннера: тихая установка, ярлык в «Пуске», запуск установленного приложения
+        # (Qt рядом с ним, --measure завершает его сам), тихое удаление — без следов в Program Files
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Fail($text) { Write-Output "::error title=MSI::$text"; exit 1 }
+          $msi = (Get-ChildItem build/package/*.msi | Select-Object -First 1).FullName
+          $p = Start-Process msiexec -Wait -PassThru -ArgumentList '/i', "`"$msi`"", '/qn', '/l*v', 'msi-install.log'
+          if ($p.ExitCode -ne 0) { Fail "install exit code $($p.ExitCode)" }
+          $exe = Join-Path $env:ProgramFiles 'UCenter\bin\UCenter.exe'
+          if (-not (Test-Path $exe)) { Fail "no $exe after install" }
+          $menus = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
+          $lnk = Get-ChildItem $menus -Recurse -Filter 'UCenter.lnk' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $lnk) { Fail 'no UCenter shortcut in the Start menu' }
+          $out = Join-Path $env:RUNNER_TEMP 'installed-run.txt'
+          $r = Start-Process -Wait -PassThru -FilePath $exe -ArgumentList '--measure', '1,3', '--measure-out', "`"$out`""
+          if ($r.ExitCode -ne 0 -or -not (Test-Path $out)) { Fail "installed app did not run (exit code $($r.ExitCode))" }
+          $p = Start-Process msiexec -Wait -PassThru -ArgumentList '/x', "`"$msi`"", '/qn', '/l*v', 'msi-uninstall.log'
+          if ($p.ExitCode -ne 0) { Fail "uninstall exit code $($p.ExitCode)" }
+          if (Test-Path (Join-Path $env:ProgramFiles 'UCenter')) { Fail 'Program Files\UCenter is left after uninstall' }
+          if (Test-Path $lnk.FullName) { Fail 'the Start menu shortcut is left after uninstall' }
+          Write-Output "::notice title=MSI::installed to $exe, shortcut $($lnk.FullName), app ran, uninstalled cleanly"
+
       - uses: actions/upload-artifact@v7
         with:
           name: UCenter-${{ runner.os }}
           path: |
             build/package/*.dmg
             build/package/*.zip
+            build/package/*.msi
           if-no-files-found: error
 
   # Проверки на Linux — параллельными задачами: время прогона задаёт самая долгая из них, а не их сумма.

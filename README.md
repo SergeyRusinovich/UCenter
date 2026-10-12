@@ -108,7 +108,7 @@ build\Release\UCenter.exe          # Windows (multi-config generators)
 
 ### Packages for other computers
 
-`cpack` installs the app together with Qt (`macdeployqt` / `windeployqt`) and packs it: a drag-and-drop DMG on macOS, a ZIP on Windows.
+`cpack` installs the app together with Qt (`macdeployqt` / `windeployqt`) and packs it: a drag-and-drop DMG on macOS; on Windows an MSI installer (Program Files, Start menu shortcut, clean upgrade and uninstall; needs the [WiX Toolset 3](https://wixtoolset.org)) and a portable ZIP.
 
 ```bash
 cpack --config build/CPackConfig.cmake -B build/package

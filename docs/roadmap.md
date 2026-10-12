@@ -130,7 +130,7 @@ At 250 ms the console got more expensive: its cost follows the number of refresh
 | 4.2 | ✅ `ccache` for the sanitizer and fuzzer builds (`.ccache` kept between runs by `actions/cache`) | Sanitizer job 2m40s → 1m15s–1m27s with a warm cache; the build step itself takes well under a minute — **met** | S |
 | 4.3 | ✅ Fuzz for 30 s on branches, 120 s on `main` and tags | Configured in the workflow — **met** | S |
 | 4.4 | ◐ macOS: sign with a Developer ID certificate and notarize the DMG ([0019](adr/0019-developer-id-signing.md)). Signing works locally and in CI (with secrets); notarization is scripted (`tools/notarize.sh`, and on `v*` tags in CI) | The app opens on a clean Mac without a Gatekeeper warning — **waiting for notarization credentials** (a `notarytool` profile locally, repository secrets in CI) | M |
-| 4.5 | Windows: an installer (CPack with WiX or NSIS) next to the ZIP, with a Start menu entry | Installs and uninstalls cleanly on a clean Windows | M |
+| 4.5 | ✅ Windows: an MSI installer (CPack WiX) next to the ZIP, with a Start menu entry ([0020](adr/0020-windows-msi-installer.md)) | Installs and uninstalls cleanly on a clean Windows — checked by CI on every build (silent install, shortcut, the installed app runs, silent uninstall, nothing left) | M |
 
 ## Phase 5 — Data and compliance
 
