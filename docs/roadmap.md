@@ -122,13 +122,13 @@ Measured after phase 3 with `--measure 20,80`, the window visible; repeated runs
 
 At 250 ms the console got more expensive: its cost follows the number of refreshes, and the old 250 ms limit on a 100 ms timer had in fact refreshed it every 300 ms.
 
-## Phase 4 — CI and delivery
+## Phase 4 — CI and delivery (4.1–4.3 done)
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 4.1 | Split the Linux job into parallel jobs: format, sanitizers with tests, clang-tidy, fuzzing | Wall time of a CI run is set by the slowest job (about 4 minutes instead of 10) | S |
-| 4.2 | `ccache` for the sanitizer and fuzzer builds | A rebuild without source changes takes under a minute | S |
-| 4.3 | Fuzz for 30 s on branches, 120 s on `main` and tags | Configured in the workflow | S |
+| 4.1 | ✅ Split the Linux job into parallel jobs: format, sanitizers with tests, clang-tidy (itself split into core, UI and tests; it only generates the moc files instead of compiling), fuzzing. Tool installation with timeouts and retries is a shared action | The slowest job sets the run time: **about 4 minutes instead of 10** (longest job 3m53s) — **met** | S |
+| 4.2 | ✅ `ccache` for the sanitizer and fuzzer builds (`.ccache` kept between runs by `actions/cache`) | Sanitizer job 2m40s → 1m15s–1m27s with a warm cache; the build step itself takes well under a minute — **met** | S |
+| 4.3 | ✅ Fuzz for 30 s on branches, 120 s on `main` and tags | Configured in the workflow — **met** | S |
 | 4.4 | macOS: sign with a Developer ID certificate and notarize the DMG | The app opens on a clean Mac without a Gatekeeper warning | M |
 | 4.5 | Windows: an installer (CPack with WiX or NSIS) next to the ZIP, with a Start menu entry | Installs and uninstalls cleanly on a clean Windows | M |
 
