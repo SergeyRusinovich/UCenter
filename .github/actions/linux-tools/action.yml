@@ -1,0 +1,40 @@
+# Установка инструментов на Linux-раннере для задач CI. Обычно ~20 с, но зеркала пакетов иногда
+# подвисают на десятки минут: у каждой команды тайм-аут, а при срыве — ещё две попытки.
+name: Linux tools
+description: Install apt packages and, optionally, the pinned clang-format, with timeouts and retries
+
+inputs:
+  packages:
+    description: apt packages to install (space-separated); empty — none
+    default: ''
+  clang-format:
+    description: "'true' — install clang-format 19.1.7 from pip (the developers' version: versions format differently)"
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        PACKAGES: ${{ inputs.packages }}
+        CLANG_FORMAT: ${{ inputs.clang-format }}
+      run: |
+        apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+        install() {
+          if [ -n "$PACKAGES" ]; then
+            # shellcheck disable=SC2086
+            timeout 180 sudo apt-get $apt_opts update || return 1
+            # shellcheck disable=SC2086
+            timeout 300 sudo apt-get $apt_opts install -y $PACKAGES || return 1
+          fi
+          if [ "$CLANG_FORMAT" = true ]; then
+            timeout 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7 || return 1
+          fi
+        }
+        for attempt in 1 2 3; do
+          install && break
+          [ "$attempt" = 3 ] && { echo "::error title=Install tools::package mirrors did not respond in 3 attempts"; exit 1; }
+          echo "::warning title=Install tools::attempt $attempt failed or timed out, retrying"
+          sleep 15
+        done
+        echo "$HOME/.local/bin" >> "$GITHUB_PATH"

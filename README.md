@@ -196,7 +196,7 @@ The app icon is drawn in [resources/icons/ucenter.svg](resources/icons/ucenter.s
 
 ### Continuous integration
 
-[.github/workflows/ci.yml](.github/workflows/ci.yml): on macOS and Windows — build with warnings as errors (MSVC without), tests and a package (DMG / ZIP) as an artifact; on Linux — clang-format, tests under ASan and UBSan, clang-tidy and two minutes of fuzzing.
+[.github/workflows/ci.yml](.github/workflows/ci.yml): on macOS and Windows — build with warnings as errors (MSVC without), tests and a package (DMG / ZIP) as an artifact; on Linux, as parallel jobs — clang-format, tests under ASan and UBSan, clang-tidy and fuzzing (two minutes on `main` and tags, 30 seconds on other branches). Linux builds are cached with ccache; a `v*` tag also creates a draft release.
 
 ## Architecture
 
