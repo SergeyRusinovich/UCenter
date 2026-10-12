@@ -10,9 +10,11 @@
 #include <QFile>
 #include <QIcon>
 #include <QTimer>
+#include <QWindow>
 
 #include <cstdio>
 #include <functional>
+#include <utility>
 
 int main(int argc, char *argv[])
 {
@@ -90,23 +92,40 @@ int main(int argc, char *argv[])
             return Sample{double(sinceStart.nsecsElapsed()) * 1e-9, cpu_time::thread(), cpu_time::process()};
         };
         auto *start = new Sample(sample());
-        QTimer::singleShot(int(from * 1000), &app, [start, sample] { *start = sample(); });
-        QTimer::singleShot(int(to * 1000), &app, [start, sample, out = args.value(measureOutOpt), first] {
-            const Sample end = sample();
-            const double wall = end.wall - start->wall;
-            const QString line = QStringLiteral("tab=%1 gui_thread=%2% all_threads=%3% span=%4s\n")
-                                     .arg(first->currentTab())
-                                     .arg(100 * (end.gui - start->gui) / wall, 0, 'f', 1)
-                                     .arg(100 * (end.all - start->all) / wall, 0, 'f', 1)
-                                     .arg(wall, 0, 'f', 1);
-            QFile file(out);
-            if (!out.isEmpty() && file.open(QIODevice::Append | QIODevice::Text))
-                file.write(line.toUtf8());
-            else
-                fputs(qPrintable(line), stderr);
-            delete start;
-            QCoreApplication::quit();
+        // Перекрытое окно система не рисует и притормаживает: замер был бы занижен.
+        // Окно поднимается наверх, а в отчёт идёт доля проверок (раз в секунду), когда его было видно
+        first->raise();
+        first->activateWindow();
+        auto *visible = new std::pair<int, int>(0, 0);  // видно, всего проверок
+        auto *probe = new QTimer(&app);
+        QObject::connect(probe, &QTimer::timeout, &app, [first, visible] {
+            visible->first += first->windowHandle() && first->windowHandle()->isExposed();
+            ++visible->second;
         });
+        QTimer::singleShot(int(from * 1000), &app, [start, sample, probe] {
+            *start = sample();
+            probe->start(1000);
+        });
+        QTimer::singleShot(
+            int(to * 1000), &app, [start, sample, visible, probe, out = args.value(measureOutOpt), first] {
+                probe->stop();  // до выхода: при выходе окно закрывается и удаляется
+                const Sample end = sample();
+                const double wall = end.wall - start->wall;
+                const QString line = QStringLiteral("tab=%1 gui_thread=%2% all_threads=%3% span=%4s visible=%5%\n")
+                                         .arg(first->currentTab())
+                                         .arg(100 * (end.gui - start->gui) / wall, 0, 'f', 1)
+                                         .arg(100 * (end.all - start->all) / wall, 0, 'f', 1)
+                                         .arg(wall, 0, 'f', 1)
+                                         .arg(visible->second ? 100 * visible->first / visible->second : 0);
+                QFile file(out);
+                if (!out.isEmpty() && file.open(QIODevice::Append | QIODevice::Text))
+                    file.write(line.toUtf8());
+                else
+                    fputs(qPrintable(line), stderr);
+                delete start;
+                delete visible;
+                QCoreApplication::quit();
+            });
     }
     return app.exec();
 }
