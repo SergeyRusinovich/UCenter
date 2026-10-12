@@ -215,7 +215,8 @@ ucenter_warnings(ucenter_recording)
 qt_add_executable(test_core tests/test_core.cpp)
 target_link_libraries(test_core PRIVATE ucenter_core ucenter_recording Qt6::Test)
 ucenter_warnings(test_core)
-add_test(NAME test_core COMMAND test_core)
+# Отчёт ещё и в файл: при сбое в CI из него берутся строки FAIL (вывод в консоль ctest может не показать)
+add_test(NAME test_core COMMAND test_core -o test_core.txt,txt -o -,txt)
 
 # Замеры ядра и файл эталонной записи для приложения; в ctest не входят — запускаются вручную
 qt_add_executable(bench_core tests/bench_core.cpp)
