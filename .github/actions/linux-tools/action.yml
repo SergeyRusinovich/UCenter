@@ -1,7 +1,9 @@
-# Установка инструментов на Linux-раннере для задач CI. Обычно ~20 с, но зеркала пакетов иногда
-# подвисают на десятки минут: у каждой команды тайм-аут, а при срыве — ещё две попытки.
+# Установка инструментов на Linux-раннере для задач CI.
+# Зеркала Ubuntu временами отдают пакеты очень медленно (clang-tidy-19 тянет ~100 МБ), поэтому
+# скачанные .deb кэшируются между прогонами: обычно докачиваются только обновившиеся пакеты.
+# Обрыв соединения ловят тайм-ауты apt; при сбое — ещё две попытки через другие зеркала.
 name: Linux tools
-description: Install apt packages and, optionally, the pinned clang-format, with timeouts and retries
+description: Install apt packages (cached between runs) and, optionally, the pinned clang-format, with retries
 
 inputs:
   packages:
@@ -14,24 +16,38 @@ inputs:
 runs:
   using: composite
   steps:
+    # Ключ — задача и номер прогона: каждый прогон сохраняет свежий набор, а берёт самый свежий из прошлых
+    - if: inputs.packages != ''
+      uses: actions/cache@v6
+      with:
+        path: ~/apt-archives
+        key: apt-${{ runner.os }}-${{ github.job }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: apt-${{ runner.os }}-${{ github.job }}-
+
     - shell: bash
       env:
         PACKAGES: ${{ inputs.packages }}
         CLANG_FORMAT: ${{ inputs.clang-format }}
       run: |
         # apt работает только с источниками Ubuntu: сторонние репозитории раннера (Microsoft, PPA)
-        # не нужны и тоже могут подвисать. Блокировку dpkg (фоновые обновления образа) ждём не дольше минуты
+        # не нужны. Блокировку dpkg (фоновые обновления образа) ждём не дольше минуты
         sources="$RUNNER_TEMP/apt-sources"
-        mkdir -p "$sources"
-        apt_opts="-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
-        apt_opts="$apt_opts -o DPkg::Lock::Timeout=60 -o Dir::Etc::SourceList=/dev/null -o Dir::Etc::SourceParts=$sources"
-        # Раннеры берут пакеты с azure.archive.ubuntu.com; если он подвис, следующие попытки — другие зеркала
+        mkdir -p "$sources" ~/apt-archives
+        apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+        apt_opts="$apt_opts -o DPkg::Lock::Timeout=60 -o APT::Keep-Downloaded-Packages=true"
+        apt_opts="$apt_opts -o Dir::Etc::SourceList=/dev/null -o Dir::Etc::SourceParts=$sources"
+        # Первая попытка — зеркала раннера (в ubuntu.sources это «mirror+file:/etc/apt/apt-mirrors.txt»),
+        # следующие — другие зеркала
         mirrors="default http://archive.ubuntu.com/ubuntu/ http://mirrors.edge.kernel.org/ubuntu/"
         use_sources() {
           rm -f "$sources"/*
-          cp /etc/apt/sources.list.d/ubuntu.sources "$sources/" 2>/dev/null \
-            || grep -E '^deb .*(ubuntu\.com|kernel\.org)' /etc/apt/sources.list > "$sources/ubuntu.list"
-          [ "$1" = default ] || sed -i -E "s#https?://[^ /]*(ubuntu\.com|kernel\.org)/ubuntu/?#$1#g" "$sources"/*
+          if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+            cp /etc/apt/sources.list.d/ubuntu.sources "$sources/"
+            [ "$1" = default ] || sed -i -E "s#^URIs:.*#URIs: $1#" "$sources/ubuntu.sources"
+          else
+            grep -E '^deb ' /etc/apt/sources.list > "$sources/ubuntu.list"
+            [ "$1" = default ] || sed -i -E "s#^(deb(-src)? +(\[[^]]*\] +)?)[^ ]+#\1$1#" "$sources/ubuntu.list"
+          fi
         }
         # Команда с тайм-аутом; при сбое — аннотация с кодом выхода (124 — тайм-аут) и концом вывода
         step() {
@@ -42,23 +58,32 @@ runs:
         }
         install() {
           if [ -n "$PACKAGES" ]; then
-            # Обычно ~20 с на всё: тайм-ауты короткие, чтобы зависшее зеркало быстро сменилось
             # shellcheck disable=SC2086
-            step 90 sudo apt-get $apt_opts update || return 1
+            step 120 sudo apt-get $apt_opts update || return 1
+            # Медленную, но идущую загрузку не обрываем: зависшее соединение ловят тайм-ауты apt
             # shellcheck disable=SC2086
-            step 180 sudo apt-get $apt_opts install -y $PACKAGES || return 1
+            step 600 sudo apt-get $apt_opts install -y $PACKAGES || return 1
           fi
           if [ "$CLANG_FORMAT" = true ]; then
             step 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7 || return 1
           fi
         }
+        # Пакеты из кэша — туда, где apt их ищет: скачиваются только недостающие и обновившиеся
+        cached=$(find ~/apt-archives -name '*.deb' | wc -l)
+        if [ "$cached" -gt 0 ]; then sudo cp ~/apt-archives/*.deb /var/cache/apt/archives/; fi
         attempt=0
         for mirror in $mirrors; do
           attempt=$((attempt + 1))
           use_sources "$mirror"
           install && break
-          [ "$attempt" = 3 ] && { echo "::error title=Install tools::package mirrors did not respond in 3 attempts"; exit 1; }
+          [ "$attempt" = 3 ] && { echo "::error title=Install tools::package installation failed in 3 attempts"; exit 1; }
           echo "::warning title=Install tools::attempt $attempt failed, switching the package mirror"
           sleep 5
         done
+        if [ -n "$PACKAGES" ]; then
+          # Для следующих прогонов — ровно то, что понадобилось сейчас
+          rm -f ~/apt-archives/*.deb
+          cp /var/cache/apt/archives/*.deb ~/apt-archives/ 2>/dev/null || true
+          echo "apt: $cached packages from the cache, $(find ~/apt-archives -name '*.deb' | wc -l) kept for the next run"
+        fi
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"

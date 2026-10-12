@@ -132,12 +132,12 @@ At 250 ms the console got more expensive: its cost follows the number of refresh
 | 4.4 | ◐ macOS: sign with a Developer ID certificate and notarize the DMG ([0019](adr/0019-developer-id-signing.md)). Signing works locally and in CI (with secrets); notarization is scripted (`tools/notarize.sh`, and on `v*` tags in CI) | The app opens on a clean Mac without a Gatekeeper warning — **waiting for notarization credentials** (a `notarytool` profile locally, repository secrets in CI) | M |
 | 4.5 | ✅ Windows: an MSI installer (CPack WiX) next to the ZIP, with a Start menu entry ([0020](adr/0020-windows-msi-installer.md)) | Installs and uninstalls cleanly on a clean Windows — checked by CI on every build (silent install, shortcut, the installed app runs, silent uninstall, nothing left) | M |
 
-## Phase 5 — Data and compliance
+## Phase 5 — Data and compliance ✅ done
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 5.1 | A `version` field in `measurements.json` with a migration path, as foreseen in [0012](adr/0012-storage-compatibility.md); a new decision record | Old files load; new files carry the version | S |
-| 5.2 | Resolve the use of Google tiles before wider distribution ([0008](adr/0008-painted-tile-map.md)): remove the source, or put it behind an explicit opt-in | A decision record and the README reflect the choice | S |
+| 5.1 | ✅ A `version` field in `measurements.json` with a migration path, as foreseen in [0012](adr/0012-storage-compatibility.md) — [0021](adr/0021-measurements-format-version.md). An unreadable file (corrupt or from a newer version) is set aside instead of being overwritten | Old files load; new files carry the version — `test_core` (`storageFormatVersions`) | S |
+| 5.2 | ✅ Resolve the use of Google tiles before wider distribution ([0008](adr/0008-painted-tile-map.md)): put behind an explicit opt-in — [0022](adr/0022-google-imagery-opt-in.md) | A decision record and the README reflect the choice — **met** | S |
 
 ## Not planned
 

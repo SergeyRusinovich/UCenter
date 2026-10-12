@@ -404,18 +404,30 @@ Rate, constellations and message output return to their default values.</source>
         <translation>卫星影像 — Esri</translation>
     </message>
     <message>
-        <source>Satellite — Google</source>
-        <translation>卫星影像 — Google</translation>
-    </message>
-    <message>
         <source>Map — OpenStreetMap</source>
         <translation>地图 — OpenStreetMap</translation>
+    </message>
+    <message>
+        <source>Satellite — Google (personal use)</source>
+        <translation>卫星 — Google（仅限个人使用）</translation>
     </message>
     <message>
         <source>Imagery provider. If tiles stay empty, the provider
 may be blocked on this network — pick another one.</source>
         <translation>底图来源。如果瓦片一直为空，该来源
 可能在当前网络中被屏蔽 — 请选择其他来源。</translation>
+    </message>
+    <message>
+        <source>Google satellite imagery</source>
+        <translation>Google 卫星影像</translation>
+    </message>
+    <message>
+        <source>Google&apos;s terms allow this imagery only for personal, non-commercial use and do not allow apps to load the tiles directly.
+
+Use it only when other imagery does not load, at your own responsibility. Show Google imagery?</source>
+        <translation>Google 的条款仅允许将此影像用于个人非商业用途，且不允许应用直接加载瓦片。
+
+请仅在其他影像无法加载时使用，风险自负。是否显示 Google 影像？</translation>
     </message>
 </context>
 <context>
@@ -743,6 +755,16 @@ may be blocked on this network — pick another one.</source>
 %2</source>
         <translation>无法读取 %1：
 %2</translation>
+    </message>
+    <message>
+        <source>Cannot read %1:
+%2
+
+The file is kept as %3; new measurements go to a new file.</source>
+        <translation>无法读取 %1：
+%2
+
+文件已保留为 %3；新的测量将保存到新文件。</translation>
     </message>
     <message>
         <source>Cannot write %1:

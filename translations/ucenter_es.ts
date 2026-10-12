@@ -404,18 +404,30 @@ La frecuencia, las constelaciones y la salida de mensajes volverán a sus valore
         <translation>Satélite — Esri</translation>
     </message>
     <message>
-        <source>Satellite — Google</source>
-        <translation>Satélite — Google</translation>
-    </message>
-    <message>
         <source>Map — OpenStreetMap</source>
         <translation>Mapa — OpenStreetMap</translation>
+    </message>
+    <message>
+        <source>Satellite — Google (personal use)</source>
+        <translation>Satélite — Google (solo uso personal)</translation>
     </message>
     <message>
         <source>Imagery provider. If tiles stay empty, the provider
 may be blocked on this network — pick another one.</source>
         <translation>Proveedor de imágenes. Si los mosaicos siguen vacíos, el proveedor
 puede estar bloqueado en esta red: elija otro.</translation>
+    </message>
+    <message>
+        <source>Google satellite imagery</source>
+        <translation>Imágenes satelitales de Google</translation>
+    </message>
+    <message>
+        <source>Google&apos;s terms allow this imagery only for personal, non-commercial use and do not allow apps to load the tiles directly.
+
+Use it only when other imagery does not load, at your own responsibility. Show Google imagery?</source>
+        <translation>Las condiciones de Google permiten estas imágenes solo para uso personal y no comercial, y no permiten que las aplicaciones carguen los mosaicos directamente.
+
+Úselas solo cuando otras imágenes no carguen, bajo su propia responsabilidad. ¿Mostrar las imágenes de Google?</translation>
     </message>
 </context>
 <context>
@@ -743,6 +755,16 @@ puede estar bloqueado en esta red: elija otro.</translation>
 %2</source>
         <translation>No se puede leer %1:
 %2</translation>
+    </message>
+    <message>
+        <source>Cannot read %1:
+%2
+
+The file is kept as %3; new measurements go to a new file.</source>
+        <translation>No se puede leer %1:
+%2
+
+El archivo se conserva como %3; las nuevas mediciones se guardarán en un archivo nuevo.</translation>
     </message>
     <message>
         <source>Cannot write %1:

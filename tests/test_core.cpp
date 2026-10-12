@@ -25,6 +25,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QRandomGenerator>
 #include <QSettings>
@@ -202,6 +203,48 @@ private slots:
         QVERIFY(QFile::exists(legacy));
         QCOMPARE(baseline_store::loadJson(path, &loaded), QString());
         QCOMPARE(loaded, old);
+    }
+
+    // Версия 1 (список) читается и при сохранении становится версией 2; файл от более новой версии
+    // отклоняется, а setAside убирает его в сторону, не меняя содержимого
+    void storageFormatVersions()
+    {
+        QTemporaryDir tmp;
+        const QString path = tmp.filePath(QStringLiteral("m.json"));
+        const auto write = [&path](const QByteArray &data) {
+            QFile f(path);
+            return f.open(QIODevice::WriteOnly) && f.write(data) == data.size();
+        };
+        const auto read = [&path] {
+            QFile f(path);
+            return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+        };
+
+        QVERIFY(write(R"([{"a_lat": 55.75, "a_lon": 37.62, "b_lat": 55.76, "b_lon": 37.63, "distance_m": 1300.5,
+                          "azimuth": 30.1, "back_azimuth": 210.1, "saved_at": "2025-05-01 10:00:00"}])"));
+        QList<Baseline> items;
+        QCOMPARE(baseline_store::loadJson(path, &items), QString());
+        QCOMPARE(items.size(), 1);
+        QCOMPARE(items[0].distanceM, 1300.5);
+
+        QCOMPARE(baseline_store::saveJson(path, items), QString());
+        const QJsonObject root = QJsonDocument::fromJson(read()).object();
+        QCOMPARE(root.value(QStringLiteral("version")).toInt(), baseline_store::FormatVersion);
+        QCOMPARE(root.value(QStringLiteral("format")).toString(), QStringLiteral("ucenter-measurements"));
+        QList<Baseline> again;
+        QCOMPARE(baseline_store::loadJson(path, &again), QString());
+        QCOMPARE(again, items);
+
+        const QByteArray newer = R"({"format": "ucenter-measurements", "version": 99, "measurements": []})";
+        QVERIFY(write(newer));
+        QVERIFY(baseline_store::loadJson(path, &items).contains(QStringLiteral("newer version")));
+        QString error;
+        const QString kept = baseline_store::setAside(path, &error);
+        QVERIFY2(!kept.isEmpty(), qPrintable(error));
+        QVERIFY(!QFile::exists(path));
+        QFile keptFile(kept);
+        QVERIFY(keptFile.open(QIODevice::ReadOnly));
+        QCOMPARE(keptFile.readAll(), newer);
     }
 
     void corruptJsonIsReported()

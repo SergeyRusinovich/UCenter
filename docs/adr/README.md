@@ -11,11 +11,11 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0005 | [Receiver I/O in a reader thread behind `ReceiverSource`](0005-reader-thread-and-sources.md) | Accepted |
 | 0006 | [Decode every frame once into a `std::variant`](0006-decode-once.md)          | Accepted |
 | 0007 | [UBX messages take priority over NMEA](0007-ubx-over-nmea.md)                 | Accepted |
-| 0008 | [Tile map drawn with `QPainter`](0008-painted-tile-map.md)                    | Accepted |
+| 0008 | [Tile map drawn with `QPainter`](0008-painted-tile-map.md)                    | Accepted, amended by 0022 |
 | 0009 | [Recordings are the raw byte stream; replay is paced by epoch time](0009-recording-and-replay.md) | Accepted |
 | 0010 | [Localization with Qt Linguist; language switch recreates the window](0010-localization.md) | Accepted, partly superseded by 0015 |
 | 0011 | [A signed app bundle on macOS for location access](0011-macos-bundle.md)       | Accepted, extended by 0019 |
-| 0012 | [Settings and data compatible with the Python version](0012-storage-compatibility.md) | Accepted, amended for Windows by 0016 |
+| 0012 | [Settings and data compatible with the Python version](0012-storage-compatibility.md) | Accepted, amended by 0016 and 0021 |
 | 0013 | [Quality gates: tests without hardware, sanitizers, fuzzing, CI](0013-quality-gates.md) | Accepted |
 | 0014 | [Version from git tags; packages with CPack](0014-versioning-and-packaging.md) | Accepted, extended by 0020 |
 | 0015 | [The language is chosen in a drop-down list; the system language is not used](0015-explicit-language-choice.md) | Accepted |
@@ -24,6 +24,8 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0018 | [Navigation and satellite models run in the reader thread and publish snapshots](0018-receiver-model-in-reader-thread.md) | Rejected after measurement |
 | 0019 | [macOS packages are signed with a Developer ID and notarized; ad hoc signing stays the default](0019-developer-id-signing.md) | Accepted |
 | 0020 | [Windows packages: an MSI installer built by CPack WiX, next to the ZIP](0020-windows-msi-installer.md) | Accepted |
+| 0021 | [measurements.json carries a format version; unreadable files are set aside, not overwritten](0021-measurements-format-version.md) | Accepted |
+| 0022 | [Google satellite imagery is shown only after the user accepts its terms](0022-google-imagery-opt-in.md) | Accepted |
 
 ## Writing a new record
 
