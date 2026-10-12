@@ -19,35 +19,46 @@ runs:
         PACKAGES: ${{ inputs.packages }}
         CLANG_FORMAT: ${{ inputs.clang-format }}
       run: |
+        # apt работает только с источниками Ubuntu: сторонние репозитории раннера (Microsoft, PPA)
+        # не нужны и тоже могут подвисать. Блокировку dpkg (фоновые обновления образа) ждём не дольше минуты
+        sources="$RUNNER_TEMP/apt-sources"
+        mkdir -p "$sources"
         apt_opts="-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
-        # Раннеры берут пакеты с azure.archive.ubuntu.com; если он подвис, повтор к нему же почти
-        # бесполезен — следующие попытки идут на другие зеркала (только источники Ubuntu)
+        apt_opts="$apt_opts -o DPkg::Lock::Timeout=60 -o Dir::Etc::SourceList=/dev/null -o Dir::Etc::SourceParts=$sources"
+        # Раннеры берут пакеты с azure.archive.ubuntu.com; если он подвис, следующие попытки — другие зеркала
         mirrors="default http://archive.ubuntu.com/ubuntu/ http://mirrors.edge.kernel.org/ubuntu/"
-        use_mirror() {
-          for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
-            [ -f "$f" ] && sudo sed -i -E "s#https?://[^ /]*(ubuntu\.com|kernel\.org)/ubuntu/?#$1#g" "$f"
-          done
-          return 0
+        use_sources() {
+          rm -f "$sources"/*
+          cp /etc/apt/sources.list.d/ubuntu.sources "$sources/" 2>/dev/null \
+            || grep -E '^deb .*(ubuntu\.com|kernel\.org)' /etc/apt/sources.list > "$sources/ubuntu.list"
+          [ "$1" = default ] || sed -i -E "s#https?://[^ /]*(ubuntu\.com|kernel\.org)/ubuntu/?#$1#g" "$sources"/*
+        }
+        # Команда с тайм-аутом; при сбое — аннотация с кодом выхода (124 — тайм-аут) и концом вывода
+        step() {
+          limit=$1; shift
+          if timeout "$limit" "$@" > "$RUNNER_TEMP/step.log" 2>&1; then return 0; else code=$?; fi
+          echo "::warning title=Install tools::'$*' failed with code $code: $(tail -n 4 "$RUNNER_TEMP/step.log" | tr '\n' ' ' | cut -c1-400)"
+          return 1
         }
         install() {
           if [ -n "$PACKAGES" ]; then
             # Обычно ~20 с на всё: тайм-ауты короткие, чтобы зависшее зеркало быстро сменилось
             # shellcheck disable=SC2086
-            timeout 90 sudo apt-get $apt_opts update || return 1
+            step 90 sudo apt-get $apt_opts update || return 1
             # shellcheck disable=SC2086
-            timeout 180 sudo apt-get $apt_opts install -y $PACKAGES || return 1
+            step 180 sudo apt-get $apt_opts install -y $PACKAGES || return 1
           fi
           if [ "$CLANG_FORMAT" = true ]; then
-            timeout 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7 || return 1
+            step 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7 || return 1
           fi
         }
         attempt=0
         for mirror in $mirrors; do
           attempt=$((attempt + 1))
-          [ "$mirror" = default ] || use_mirror "$mirror"
+          use_sources "$mirror"
           install && break
           [ "$attempt" = 3 ] && { echo "::error title=Install tools::package mirrors did not respond in 3 attempts"; exit 1; }
-          echo "::warning title=Install tools::attempt $attempt failed or timed out, switching the package mirror"
+          echo "::warning title=Install tools::attempt $attempt failed, switching the package mirror"
           sleep 5
         done
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
