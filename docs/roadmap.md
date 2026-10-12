@@ -81,16 +81,33 @@ Steady state: CPU time between the 20th and the 80th second of a replay of the r
 
 The map also looks better: with the origin on device pixels, the thin seams between tiles that were visible on Retina screens are gone.
 
-## Phase 3 — Interface (code done, measurements pending)
+## Phase 3 — Interface ✅ done on macOS; Windows painting not measured
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 3.1 | ✅ Console as a model and view: `MessageLog` in the core (ring buffer of 50 000 messages, NMEA/UBX filter over the whole history), `ConsoleModel` + `QListView` with uniform rows, text built only for visible rows; copy, Esc to follow new lines again | `test_core` (`messageLogEvictsAndFilters`); filters switch instantly. **Not measured yet:** CPU of the Console tab after the change and memory with a full history | M |
-| 3.2 | ✅ Console details: selecting a row shows the fields of the message — named NMEA fields, decoded UBX fields, the frame in hex (`messages::details`) | `test_core` (`messageDetailsForEveryType`) covers every type in `message_types.h` | M |
-| 3.3 | Measure on Windows. Ready: `--measure 20,80 --measure-out load.txt` reports the GUI-thread and process load on every platform (`cpu_time`); **waiting for a run on a Windows machine** | The table has a Windows row for each tab | S |
-| 3.4 | ✅ Compass repaints only when the heading or course changes by at least 0.5° | **Not measured yet:** Dashboard GUI thread at 1× under 5 % | S |
+| 3.1 | ✅ Console as a model and view: `MessageLog` in the core (ring buffer of 50 000 messages, NMEA/UBX filter over the whole history), `ConsoleModel` + `QListView` with uniform rows, text built only for visible rows; copy, full line as a tooltip; a selected line stays in place while the history grows and is kept in the details when it is evicted; Esc follows new lines again | Filter switching with a full history: **0.22 ms** (`bench_core`, `consoleFilterSwitch`) — **met**. History raised from 5 000 to 50 000 with **no measurable memory growth** (291 MB vs 293 MB after two minutes at 4×) — **met**. Console at 1× no slower than after 2.3: **8.7 % vs 8.6 %** — **met** | M |
+| 3.2 | ✅ Console details: selecting a row shows the fields of the message — named NMEA fields, decoded UBX fields, the frame in hex (`messages::details`) | `test_core` (`messageDetailsForEveryType`) covers every type in `message_types.h` — **met** | M |
+| 3.3 | ◐ Measure on Windows. `--measure 20,80 --measure-out load.txt` (with `--tab N`) reports the GUI-thread and process load and whether the window was visible, on every platform; the **Measure** workflow runs it on GitHub's Windows and macOS runners | On the Windows runner the app replays the stream and processing costs **0.0–0.1 %**, but the runner has no screen, so the window is not painted and painting cannot be measured there (the macOS runner likewise shows Dashboard at 2 % instead of 7.5 %). **A run on a real Windows computer is still needed** for the table | S |
+| 3.4 | ✅ Compass repaints only when the heading or course changes by at least 0.5° | Dashboard GUI thread at 1× under 5 % — **not met: 7.5 %** (7.7 % before). The rest is the value labels and the map, not the compass | S |
 
-Dropped: decoding map tiles in a thread pool — decoding does not appear in the profile.
+### Phase 3 results
+
+macOS 26.6, Apple M1 Pro, built-in `--measure 20,80`, the window visible for the whole measurement (`visible=100%`). "Before" is the phase 2 result above.
+
+| Open tab | Speed | Before: GUI thread / all threads | After: GUI thread / all threads |
+|---|---|---|---|
+| Console | 1× | 8.6 % / 8.8 % | 8.7 % / 8.9 % |
+| Console | 4× | 13.2 % / 13.5 % | **9.1 % / 9.5 %** |
+| Dashboard | 1× | 7.7 % / 9.9 % | 7.5 % / 9.2 % |
+| Dashboard | 4× | 12.9 % / 17.8 % | 13.3 % / 18.1 % |
+| Satellites | 1× | 2.3 % / 2.5 % | 2.3 % / 2.5 % |
+
+The console no longer gets more expensive with the data rate: at 4× it costs about the same as at 1×, because only the visible rows are laid out.
+
+Two lessons from measuring, now built into `--measure`:
+
+- macOS neither paints nor runs the timers of a covered window at full rate, so a covered window looks cheap. `--measure` raises the window and reports `visible=…%`; runs below 100 % are discarded.
+- Qt 6 closes the windows on quit, which used to save the window size and tab of every measured run into the user's settings. Runs with `--tab` or `--measure` no longer save them.
 
 ## Phase 4 — CI and delivery
 

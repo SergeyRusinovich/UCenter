@@ -79,7 +79,13 @@ ConsoleTab::ConsoleTab(QWidget *parent)
         m_view->scrollToBottom();
     });
     connect(m_view->selectionModel(), &QItemSelectionModel::currentRowChanged, this,
-            [this](const QModelIndex &current) { showDetails(current.isValid() ? current.row() : -1); });
+            [this](const QModelIndex &current) {
+                // Выбранная строка вытеснена из истории: Qt делает текущей соседнюю, но поля остаются
+                // от сообщения, которое выбрал пользователь, а выделение снимается
+                if (m_appending)
+                    return;
+                showDetails(current.isValid() ? current.row() : -1);
+            });
 
     m_details = new QPlainTextEdit;
     m_details->setObjectName(QStringLiteral("console"));
@@ -135,7 +141,14 @@ void ConsoleTab::flush()
     // выбранная строка не должна уезжать, пока читают её поля
     const QScrollBar *bar = m_view->verticalScrollBar();
     const bool follow = bar->value() == bar->maximum() && !m_view->selectionModel()->hasSelection();
+    m_appending = true;
+    const int current = m_view->currentIndex().row();
     const qsizetype evicted = m_model->append(m_pending);
+    if (current >= 0 && current < evicted) {
+        m_view->selectionModel()->clearSelection();
+        m_view->selectionModel()->clearCurrentIndex();
+    }
+    m_appending = false;
     m_pending.clear();
     if (follow) {
         m_view->scrollToBottom();

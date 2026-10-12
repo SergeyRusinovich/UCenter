@@ -148,12 +148,13 @@ build/make_recording reference.ubx [epochs]        # the same stream as a file (
 # Replay it in the app at a chosen speed and quit at the end (for a profiler)
 build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --speed 4 --quit-at-end
 
-# CPU load in the steady state: GUI thread and all threads between the 20th and 80th second, appended to a file
-build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --measure 20,80 --measure-out load.txt
-build\Release\UCenter.exe --replay reference.ubx --measure 20,80 --measure-out load.txt     # Windows
+# CPU load in the steady state: GUI thread and all threads between the 20th and 80th second, appended to a file;
+# --tab picks the tab (0 = Console); the window must stay visible (the report says visible=100%)
+build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --tab 0 --measure 20,80 --measure-out load.txt
+build\Release\UCenter.exe --replay reference.ubx --tab 0 --measure 20,80 --measure-out load.txt   # Windows
 ```
 
-The tab that is open is the one measured (the last tab used). Neither tool is part of `ctest`. The current numbers are in the [roadmap](docs/roadmap.md#baseline-measurements).
+Runs with `--tab` or `--measure` do not save the window size and tab. The [Measure workflow](.github/workflows/measure.yml) runs the same on GitHub's Windows and macOS runners; they have no screen, so it shows the processing load but not the cost of painting. Neither tool is part of `ctest`. The current numbers are in the [roadmap](docs/roadmap.md#baseline-measurements).
 
 ### Sanitizers and fuzzing
 

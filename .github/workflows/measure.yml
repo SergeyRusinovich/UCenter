@@ -1,0 +1,88 @@
+# Нагрузка приложения на эталонной записи (docs/roadmap.md, «Baseline measurements»): процент CPU
+# GUI-потока и всех потоков с 20-й по 80-ю секунду воспроизведения, для каждой вкладки.
+# Запускается вручную (Actions → Measure) или пушем в ветку measure/…; в обычный CI не входит.
+# Виртуальные машины CI — без видеокарты и с другими процессорами: цифры сравнимы между вкладками
+# и прогонами, но не с настольным компьютером.
+name: Measure
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['measure/**']
+
+env:
+  QT_VERSION: '6.8.3'
+  QT_MODULES: 'qtpositioning qtserialport'
+
+jobs:
+  measure:
+    name: Measure (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release --parallel --target UCenter make_recording
+
+      - name: Measure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          QT_FORCE_STDERR_LOGGING: '1'
+        run: |
+          $diag = @()
+          & build/Release/make_recording.exe reference.ubx
+          $diag += "make_recording exit code: $LASTEXITCODE"
+          $rec = (Resolve-Path reference.ubx -ErrorAction SilentlyContinue).Path
+          if ($rec) { $diag += "recording: $rec, $((Get-Item $rec).Length) bytes" } else { $diag += 'no recording'; $rec = 'reference.ubx' }
+          foreach ($tab in 0, 1, 2) {
+            # Приложение с GUI-подсистемой: ждём его завершения явно; журнал Qt — в файл
+            $p = Start-Process -Wait -PassThru -FilePath build/Release/UCenter.exe -RedirectStandardError "qt-$tab.log" `
+              -ArgumentList '--replay', "`"$rec`"", '--tab', $tab, '--measure', '20,80', '--measure-out', 'load.txt'
+            $diag += "tab $tab exit code: $($p.ExitCode)"
+            $diag += Get-Content "qt-$tab.log" -TotalCount 8 -ErrorAction SilentlyContinue
+          }
+          # Логи шагов видны только с доступом к репозиторию — диагностику выводим аннотацией
+          $text = ($diag -join '%0A') -replace '::', ':'
+          Write-Output "::notice title=Windows measure diagnostics::$text"
+          Get-Content load.txt
+
+      - name: Measure (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          build/make_recording reference.ubx
+          for tab in 0 1 2; do
+            build/UCenter.app/Contents/MacOS/UCenter --replay reference.ubx --tab $tab --measure 20,80 --measure-out load.txt
+          done
+          cat load.txt
+
+      - name: Report
+        shell: bash
+        run: |
+          {
+            echo "### Load on ${{ matrix.os }} (reference stream, 1x, seconds 20-80)"
+            echo '```'
+            cat load.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Load on ${{ matrix.os }}::$(sed 's/%/%25/g' load.txt | awk '{printf "%s%%0A", $0}')"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: load-${{ matrix.os }}
+          path: load.txt

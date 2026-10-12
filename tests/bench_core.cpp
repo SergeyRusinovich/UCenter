@@ -5,6 +5,7 @@
 #include "recording.h"
 
 #include "core/frame_reader.h"
+#include "core/message_log.h"
 #include "core/messages.h"
 #include "core/navigation.h"
 #include "core/satellites.h"
@@ -75,6 +76,19 @@ private slots:
         const double end = m_times.last();
         QBENCHMARK {
             QCOMPARE(tracker.snapshot(end).sats.size(), 32);
+        }
+    }
+
+    // Смена фильтра консоли при полной истории (50 000 сообщений): пересборка списка строк
+    void consoleFilterSwitch()
+    {
+        MessageLog log(50000);
+        log.evict(m_messages.size());
+        log.append(m_messages);
+        QCOMPARE(log.rowCount(), 50000);
+        QBENCHMARK {
+            log.setFilter(MessageLog::Filter::Ubx);
+            log.setFilter(MessageLog::Filter::All);
         }
     }
 

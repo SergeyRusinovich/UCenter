@@ -150,6 +150,12 @@ void MainWindow::startReplay(const QString &path, double speed, bool quitAtEnd)
     m_session->openReplay(path, speed);
 }
 
+void MainWindow::showTab(int index)
+{
+    if (index >= 0 && index < m_tabs->count())
+        m_tabs->setCurrentIndex(index);
+}
+
 QString MainWindow::currentTab() const
 {
     return m_tabs->currentWidget()->metaObject()->className();
@@ -211,7 +217,8 @@ void MainWindow::saveSettings() const
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    saveSettings();
+    if (m_keepSettings)
+        saveSettings();
     m_session->close();
     QMainWindow::closeEvent(event);
 }
