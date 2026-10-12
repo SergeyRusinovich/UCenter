@@ -39,7 +39,7 @@ A lightweight, cross-platform desktop alternative to u-center for working with u
     <td><img src="docs/images/configuration.png" alt="Configuration tab"></td>
   </tr>
   <tr>
-    <td><b>Console</b> — the live stream: NMEA sentences as received and decoded UBX messages, with freeze and NMEA/UBX filters.</td>
+    <td><b>Console</b> — the live stream: NMEA sentences as received and decoded UBX messages, 50 000 kept, with freeze and NMEA/UBX filters; the fields of the selected message are shown below.</td>
     <td><b>Configuration</b> — navigation rate, constellations and USB message output through the M9 Configuration Database; every change is confirmed by ACK and read back.</td>
   </tr>
 </table>
