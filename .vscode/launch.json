@@ -1,0 +1,90 @@
+{
+  // Отладка: macOS и Linux — CodeLLDB (vadimcn.vscode-lldb), Windows — отладчик MSVC (ms-vscode.cpptools).
+  // Перед запуском собирается пресет debug (build-debug/). На Windows рядом с exe нет DLL Qt:
+  // задайте QT_ROOT_DIR — каталог Qt для MSVC, например C:\Qt\6.8.3\msvc2022_64.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "UCenter",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/UCenter.app/Contents/MacOS/UCenter",
+      "linux": { "program": "${workspaceFolder}/build-debug/UCenter" },
+      "args": [],
+      "cwd": "${workspaceFolder}/build-debug",
+      // qDebug/qWarning — в Debug Console, а не в системный журнал
+      "env": { "QT_FORCE_STDERR_LOGGING": "1" },
+      "preLaunchTask": "Build: Debug"
+    },
+    {
+      // Без приёмника: 10 минут эталонного потока NAV-PVT/NAV-SAT/NMEA (tests/recording.cpp)
+      "name": "UCenter: replay",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/UCenter.app/Contents/MacOS/UCenter",
+      "linux": { "program": "${workspaceFolder}/build-debug/UCenter" },
+      "args": ["--replay", "reference.ubx", "--speed", "1"],
+      "cwd": "${workspaceFolder}/build-debug",
+      "env": { "QT_FORCE_STDERR_LOGGING": "1" },
+      "preLaunchTask": "Make reference recording"
+    },
+    {
+      "name": "test_core",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/test_core",
+      // Один тест: имя функции из tests/test_core.cpp, например ["vincentyReference"]
+      "args": [],
+      "cwd": "${workspaceFolder}/build-debug",
+      "preLaunchTask": "Build: Debug"
+    },
+    {
+      "name": "test_session",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/test_session",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-debug",
+      "preLaunchTask": "Build: Debug"
+    },
+    {
+      "name": "UCenter (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/Debug/UCenter.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-debug",
+      "environment": [
+        { "name": "PATH", "value": "${env:QT_ROOT_DIR}\\bin;${env:PATH}" },
+        { "name": "QT_FORCE_STDERR_LOGGING", "value": "1" }
+      ],
+      "console": "internalConsole",
+      "preLaunchTask": "Build: Debug"
+    },
+    {
+      "name": "UCenter: replay (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/Debug/UCenter.exe",
+      "args": ["--replay", "reference.ubx", "--speed", "1"],
+      "cwd": "${workspaceFolder}/build-debug",
+      "environment": [
+        { "name": "PATH", "value": "${env:QT_ROOT_DIR}\\bin;${env:PATH}" },
+        { "name": "QT_FORCE_STDERR_LOGGING", "value": "1" }
+      ],
+      "console": "internalConsole",
+      "preLaunchTask": "Make reference recording"
+    },
+    {
+      "name": "test_core (Windows)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build-debug/Debug/test_core.exe",
+      "args": [],
+      "cwd": "${workspaceFolder}/build-debug",
+      "environment": [{ "name": "PATH", "value": "${env:QT_ROOT_DIR}\\bin;${env:PATH}" }],
+      "console": "internalConsole",
+      "preLaunchTask": "Build: Debug"
+    }
+  ]
+}
