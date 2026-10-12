@@ -17,12 +17,13 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0011 | [A signed app bundle on macOS for location access](0011-macos-bundle.md)       | Accepted, extended by 0019 |
 | 0012 | [Settings and data compatible with the Python version](0012-storage-compatibility.md) | Accepted, amended for Windows by 0016 |
 | 0013 | [Quality gates: tests without hardware, sanitizers, fuzzing, CI](0013-quality-gates.md) | Accepted |
-| 0014 | [Version from git tags; packages with CPack](0014-versioning-and-packaging.md) | Accepted |
+| 0014 | [Version from git tags; packages with CPack](0014-versioning-and-packaging.md) | Accepted, extended by 0020 |
 | 0015 | [The language is chosen in a drop-down list; the system language is not used](0015-explicit-language-choice.md) | Accepted |
 | 0016 | [On Windows the app sets an organization name for QSettings](0016-windows-organization-name.md) | Accepted |
 | 0017 | [Layered architecture with presentation models in the core; no MVVM, no QML](0017-layers-and-presentation-models.md) | Accepted |
 | 0018 | [Navigation and satellite models run in the reader thread and publish snapshots](0018-receiver-model-in-reader-thread.md) | Rejected after measurement |
 | 0019 | [macOS packages are signed with a Developer ID and notarized; ad hoc signing stays the default](0019-developer-id-signing.md) | Accepted |
+| 0020 | [Windows packages: an MSI installer built by CPack WiX, next to the ZIP](0020-windows-msi-installer.md) | Accepted |
 
 ## Writing a new record
 

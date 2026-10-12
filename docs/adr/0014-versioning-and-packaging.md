@@ -1,6 +1,6 @@
 # 0014. Version from git tags; packages with CPack
 
-- **Status:** Accepted
+- **Status:** Accepted; the Windows MSI installer is added by [0020](0020-windows-msi-installer.md)
 - **Date:** 2026-10-11
 
 ## Context
