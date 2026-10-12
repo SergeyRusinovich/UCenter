@@ -76,6 +76,7 @@ jobs:
   checks:
     name: Format, clang-tidy, sanitizers, fuzzing (Linux)
     runs-on: ubuntu-24.04
+    timeout-minutes: 40  # обычно ~10 минут; зависшее зеркало пакетов не должно занимать час
     env:
       CC: clang
       CXX: clang++
@@ -84,12 +85,23 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install tools
+        # Обычно ~20 с, но зеркала пакетов иногда подвисают на десятки минут: у каждой команды
+        # тайм-аут, а при срыве — ещё две попытки
         run: |
-          sudo apt-get update
-          # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок
-          sudo apt-get install -y clang clang-tidy-19 libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
-          # Та же версия clang-format, что у разработчиков: разные версии форматируют по-разному
-          pip install --user clang-format==19.1.7
+          apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+          for attempt in 1 2 3; do
+            # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок.
+            # Та же версия clang-format, что у разработчиков: разные версии форматируют по-разному
+            if timeout 180 sudo apt-get $apt_opts update \
+              && timeout 300 sudo apt-get $apt_opts install -y \
+                   clang clang-tidy-19 libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
+              && timeout 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7; then
+              break
+            fi
+            [ "$attempt" = 3 ] && { echo "::error title=Install tools::package mirrors did not respond in 3 attempts"; exit 1; }
+            echo "::warning title=Install tools::attempt $attempt failed or timed out, retrying"
+            sleep 15
+          done
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - uses: jurplel/install-qt-action@v4
