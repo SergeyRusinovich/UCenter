@@ -2,6 +2,7 @@
 
 #include "core/format.h"
 
+#include <QApplication>
 #include <QPainter>
 
 ValueLabel::ValueLabel(QWidget *parent)
@@ -9,6 +10,7 @@ ValueLabel::ValueLabel(QWidget *parent)
     , m_text(fmt::Empty)
 {
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+    setAttribute(Qt::WA_OpaquePaintEvent);
 }
 
 void ValueLabel::setText(const QString &text)
@@ -33,6 +35,8 @@ QSize ValueLabel::minimumSizeHint() const
 void ValueLabel::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
+    // Цвет карточки — из палитры приложения: у самого виджета QSS делает фон прозрачным
+    p.fillRect(rect(), QApplication::palette().color(QPalette::Base));
     p.setPen(palette().color(QPalette::WindowText));
     p.drawText(rect(), Qt::AlignLeft | Qt::AlignVCenter, fontMetrics().elidedText(m_text, Qt::ElideRight, width()));
 }

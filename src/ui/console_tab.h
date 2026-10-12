@@ -3,7 +3,6 @@
 
 #include "core/messages.h"
 
-#include <QElapsedTimer>
 #include <QList>
 #include <QWidget>
 
@@ -18,13 +17,11 @@ class ConsoleTab : public QWidget
 
 public:
     static constexpr int Capacity = 50000;  // сообщений в истории; фильтры показывают её часть
-    // Вставка строк и перерисовка дороже самих данных: выводим не чаще 4 раз в секунду
-    static constexpr int FlushIntervalMs = 250;
 
     explicit ConsoleTab(QWidget *parent = nullptr);
 
     void appendMessage(const GnssMessage &msg);
-    // Переносит накопленные сообщения в список (не чаще FlushIntervalMs)
+    // Переносит накопленные сообщения в список; как часто — решает владелец (таймер MainWindow)
     void flush();
 
 private:
@@ -42,6 +39,5 @@ private:
     QPlainTextEdit *m_details;
     // Сообщения копятся здесь и переходят в список одной пачкой вместо сотен вставок в секунду
     QList<GnssMessage> m_pending;
-    QElapsedTimer m_lastFlush;
     bool m_appending = false;  // строки меняет добавление, а не пользователь
 };
