@@ -193,6 +193,8 @@ elseif(WIN32)
     set(CPACK_WIX_UPGRADE_GUID C7595876-A5F1-40DA-BF7E-43674F64D6D8)
     set(CPACK_WIX_PRODUCT_ICON ${PROJECT_SOURCE_DIR}/resources/icons/ucenter.ico)
     set(CPACK_WIX_PROGRAM_MENU_FOLDER UCenter)
+    # Для всех пользователей: файлы в Program Files, ярлык — в общем меню «Пуск» (CMake 3.29+)
+    set(CPACK_WIX_INSTALL_SCOPE perMachine)
     # Лицензию WiX показывает в установщике; ему нужен файл .txt или .rtf
     configure_file(LICENSE ${CMAKE_BINARY_DIR}/LICENSE.txt COPYONLY)
     set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_BINARY_DIR}/LICENSE.txt)

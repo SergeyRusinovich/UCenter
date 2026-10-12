@@ -10,7 +10,7 @@ On Windows the app shipped only as a ZIP: the user unpacks it somewhere, finds `
 
 ## Decision
 
-- CPack builds both a ZIP and an MSI (WiX generator) on Windows. The MSI installs into `Program Files\UCenter`, adds `UCenter` to the Start menu, shows the MIT license and uses the app icon.
+- CPack builds both a ZIP and an MSI (WiX generator) on Windows. The MSI installs for all users (`CPACK_WIX_INSTALL_SCOPE perMachine`): into `Program Files\UCenter`, with `UCenter` in the all-users Start menu; it shows the MIT license and uses the app icon.
 - `CPACK_WIX_UPGRADE_GUID` is fixed (`C7595876-A5F1-40DA-BF7E-43674F64D6D8`): it is how Windows recognizes a newer MSI as an upgrade of the installed one, so it never changes.
 - MSI accepts only a numeric `X.Y.Z` version; [cmake/cpack_project_config.cmake](../../cmake/cpack_project_config.cmake) gives the WiX generator the tag version, while the file name keeps the full version.
 - CI checks every Windows build on a clean runner: silent install, the Start menu shortcut, a run of the installed app (it must start with the deployed Qt), silent uninstall, nothing left in `Program Files`.

@@ -117,9 +117,10 @@ jobs:
           if ($p.ExitCode -ne 0) { Fail "install exit code $($p.ExitCode)" }
           $exe = Join-Path $env:ProgramFiles 'UCenter\bin\UCenter.exe'
           if (-not (Test-Path $exe)) { Fail "no $exe after install" }
-          $menus = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs"
-          $lnk = Get-ChildItem $menus -Recurse -Filter 'UCenter.lnk' -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $lnk) { Fail 'no UCenter shortcut in the Start menu' }
+          # Установка для всех пользователей: ярлык — в общем меню «Пуск», а не в меню того, кто ставил
+          $menu = "$env:ProgramData\Microsoft\Windows\Start Menu\Programs"
+          $lnk = Get-ChildItem $menu -Recurse -Filter 'UCenter.lnk' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $lnk) { Fail 'no UCenter shortcut in the all-users Start menu' }
           $out = Join-Path $env:RUNNER_TEMP 'installed-run.txt'
           $r = Start-Process -Wait -PassThru -FilePath $exe -ArgumentList '--measure', '1,3', '--measure-out', "`"$out`""
           if ($r.ExitCode -ne 0 -or -not (Test-Path $out)) { Fail "installed app did not run (exit code $($r.ExitCode))" }
