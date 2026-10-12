@@ -1,6 +1,6 @@
 # 0011. A signed app bundle on macOS for location access
 
-- **Status:** Accepted
+- **Status:** Accepted; signing with a Developer ID and notarization added by [0019](0019-developer-id-signing.md)
 - **Date:** 2026-10-11
 
 ## Context

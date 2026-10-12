@@ -12,6 +12,8 @@ option(UCENTER_WERROR "Treat compiler warnings as errors" OFF)
 option(UCENTER_FUZZ "Build the libFuzzer target for the frame reader (clang only)" OFF)
 # ASan из LLVM 19 зависает при старте на macOS 26 — там фаззер собирают с undefined
 set(UCENTER_FUZZ_SANITIZERS "address,undefined" CACHE STRING "Sanitizers for the fuzz build")
+# Подпись на macOS (ADR 0019): "-" — ad hoc; "Developer ID Application: …" — пакеты, которые можно нотаризовать
+set(UCENTER_CODESIGN_IDENTITY "-" CACHE STRING "macOS code signing identity: - (ad hoc) or a Developer ID Application identity")
 
 find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Widgets Network Positioning SerialPort Svg Test LinguistTools)
 qt_standard_project_setup(I18N_SOURCE_LANGUAGE en I18N_TRANSLATED_LANGUAGES ru es zh_CN)
@@ -144,10 +146,17 @@ set_target_properties(UCenter PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${UCENTER_VERSION_FULL}
 )
 if(APPLE)
-    # macOS выдаёт геопозицию только подписанному бандлу с NSLocationUsageDescription в Info.plist;
-    # ad-hoc подпись всего бандла нужна, чтобы macOS запомнила разрешение
+    # macOS выдаёт геопозицию только подписанному бандлу с NSLocationUsageDescription в Info.plist и
+    # помнит разрешение, пока подпись та же. С Developer ID подпись одна и та же от сборки к сборке;
+    # метка времени Apple для сборки разработчика не нужна (она нужна только для нотаризации)
+    if(UCENTER_CODESIGN_IDENTITY STREQUAL "-")
+        set(UCENTER_BUILD_SIGN --force --sign -)
+    else()
+        set(UCENTER_BUILD_SIGN --force --options runtime --timestamp=none
+            --entitlements ${PROJECT_SOURCE_DIR}/cmake/UCenter.entitlements --sign ${UCENTER_CODESIGN_IDENTITY})
+    endif()
     add_custom_command(TARGET UCenter POST_BUILD
-        COMMAND codesign --force --sign - $<TARGET_BUNDLE_DIR:UCenter>
+        COMMAND codesign ${UCENTER_BUILD_SIGN} $<TARGET_BUNDLE_DIR:UCenter>
         VERBATIM)
 endif()
 
@@ -160,7 +169,9 @@ qt_generate_deploy_app_script(TARGET UCenter OUTPUT_SCRIPT deploy_script NO_UNSU
 install(SCRIPT ${deploy_script})
 if(APPLE)
     # macdeployqt меняет файлы внутри бандла — подпись нужно обновить
-    install(CODE "execute_process(COMMAND codesign --force --deep --sign - \"\${CMAKE_INSTALL_PREFIX}/UCenter.app\")")
+    install(CODE "set(UCENTER_CODESIGN_IDENTITY [=[${UCENTER_CODESIGN_IDENTITY}]=])
+                  set(UCENTER_ENTITLEMENTS [=[${PROJECT_SOURCE_DIR}/cmake/UCenter.entitlements]=])")
+    install(SCRIPT cmake/codesign_bundle.cmake)
 endif()
 
 set(CPACK_PACKAGE_NAME UCenter)
@@ -170,6 +181,9 @@ set(CPACK_PACKAGE_FILE_NAME UCenter-${UCENTER_VERSION_FULL}-${CMAKE_SYSTEM_NAME}
 if(APPLE)
     set(CPACK_GENERATOR DragNDrop)
     set(CPACK_DMG_VOLUME_NAME UCenter)
+    # Образ подписывается тем же Developer ID (с ad hoc — нет)
+    set(CPACK_UCENTER_CODESIGN_IDENTITY ${UCENTER_CODESIGN_IDENTITY})
+    set(CPACK_POST_BUILD_SCRIPTS ${PROJECT_SOURCE_DIR}/cmake/codesign_dmg.cmake)
 elseif(WIN32)
     set(CPACK_GENERATOR ZIP)
 else()
