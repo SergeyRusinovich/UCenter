@@ -73,53 +73,54 @@ jobs:
             build/package/*.zip
           if-no-files-found: error
 
-  checks:
-    name: Format, clang-tidy, sanitizers, fuzzing (Linux)
+  # Проверки на Linux — параллельными задачами: время прогона задаёт самая долгая из них, а не их сумма.
+  # Сборки кэшируются ccache (каталог .ccache — между прогонами через actions/cache)
+  format:
+    name: clang-format (Linux)
     runs-on: ubuntu-24.04
-    timeout-minutes: 40  # обычно ~10 минут; зависшее зеркало пакетов не должно занимать час
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/linux-tools
+        with:
+          clang-format: 'true'
+      - name: clang-format
+        run: clang-format --version && tools/format.sh --check
+
+  sanitizers:
+    name: Tests under ASan + UBSan (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
     env:
       CC: clang
       CXX: clang++
       QT_QPA_PLATFORM: offscreen
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
-
-      - name: Install tools
-        # Обычно ~20 с, но зеркала пакетов иногда подвисают на десятки минут: у каждой команды
-        # тайм-аут, а при срыве — ещё две попытки
-        run: |
-          apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
-          for attempt in 1 2 3; do
-            # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок.
-            # Та же версия clang-format, что у разработчиков: разные версии форматируют по-разному
-            if timeout 180 sudo apt-get $apt_opts update \
-              && timeout 300 sudo apt-get $apt_opts install -y \
-                   clang clang-tidy-19 libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev \
-              && timeout 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7; then
-              break
-            fi
-            [ "$attempt" = 3 ] && { echo "::error title=Install tools::package mirrors did not respond in 3 attempts"; exit 1; }
-            echo "::warning title=Install tools::attempt $attempt failed or timed out, retrying"
-            sleep 15
-          done
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-
+      - uses: ./.github/actions/linux-tools
+        with:
+          packages: clang ccache libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           modules: ${{ env.QT_MODULES }}
           cache: true
-
-      - name: clang-format
-        run: clang-format --version && tools/format.sh --check
+      - uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-sanitizers-${{ github.sha }}
+          restore-keys: ccache-sanitizers-
 
       - name: Configure (ASan + UBSan)
         run: >
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DUCENTER_WERROR=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined"
 
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build --parallel && ccache --show-stats
 
       - name: Test under sanitizers
         run: |
@@ -136,6 +137,39 @@ jobs:
           cmake --build build --target update_translations
           git diff --exit-code -- translations/
 
+  tidy:
+    name: clang-tidy (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      CC: clang
+      CXX: clang++
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/linux-tools
+        with:
+          # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок
+          packages: clang clang-tidy-19 ccache libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+      - uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-tidy-${{ github.sha }}
+          restore-keys: ccache-tidy-
+
+      # Сборка нужна ради сгенерированных moc-файлов, которые включают исходники
+      - name: Build
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build --parallel && ccache --show-stats
+
       - name: clang-tidy
         env:
           CLANG_TIDY: clang-tidy-19
@@ -147,12 +181,40 @@ jobs:
             exit 1
           fi
 
+  fuzz:
+    name: Fuzzing (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CC: clang
+      CXX: clang++
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 500M
+      # На main и тегах — две минуты, на остальных ветках хватает 30 секунд
+      FUZZ_SECONDS: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && '120' || '30' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/linux-tools
+        with:
+          packages: clang ccache libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          modules: ${{ env.QT_MODULES }}
+          cache: true
+      - uses: actions/cache@v6
+        with:
+          path: .ccache
+          key: ccache-fuzz-${{ github.sha }}
+          restore-keys: ccache-fuzz-
+
       - name: Fuzz the frame reader
         run: |
-          cmake -S . -B build-fuzz -DCMAKE_BUILD_TYPE=Debug -DUCENTER_FUZZ=ON
-          cmake --build build-fuzz --target fuzz_frame_reader --parallel
+          cmake -S . -B build-fuzz -DCMAKE_BUILD_TYPE=Debug -DUCENTER_FUZZ=ON \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build-fuzz --target fuzz_frame_reader --parallel && ccache --show-stats
           mkdir -p corpus
-          build-fuzz/fuzz_frame_reader -max_total_time=120 -timeout=10 corpus fuzz/corpus
+          build-fuzz/fuzz_frame_reader -max_total_time="$FUZZ_SECONDS" -timeout=10 corpus fuzz/corpus
 
       - uses: actions/upload-artifact@v7
         if: failure()
@@ -168,7 +230,7 @@ jobs:
     # Тег v* — черновик релиза GitHub с пакетами macOS и Windows; публикуется вручную после проверки
     name: Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [build, checks]
+    needs: [build, format, sanitizers, tidy, fuzz]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
