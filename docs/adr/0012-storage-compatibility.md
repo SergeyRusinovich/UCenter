@@ -1,6 +1,6 @@
 # 0012. Settings and data compatible with the Python version
 
-- **Status:** Accepted; the organization name on Windows is amended by [0016](0016-windows-organization-name.md)
+- **Status:** Accepted; the organization name on Windows is amended by [0016](0016-windows-organization-name.md); the file format gets a version in [0021](0021-measurements-format-version.md)
 - **Date:** 2026-10-11
 
 ## Context

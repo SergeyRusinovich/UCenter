@@ -745,6 +745,16 @@ puede estar bloqueado en esta red: elija otro.</translation>
 %2</translation>
     </message>
     <message>
+        <source>Cannot read %1:
+%2
+
+The file is kept as %3; new measurements go to a new file.</source>
+        <translation>No se puede leer %1:
+%2
+
+El archivo se conserva como %3; las nuevas mediciones se guardarán en un archivo nuevo.</translation>
+    </message>
+    <message>
         <source>Cannot write %1:
 %2</source>
         <translation>No se puede escribir %1:

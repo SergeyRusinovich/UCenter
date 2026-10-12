@@ -145,8 +145,16 @@ void SavedMeasurementsPanel::updateButtons()
 void SavedMeasurementsPanel::load()
 {
     const QString error = baseline_store::loadJson(m_storePath, &m_items);
-    if (!error.isEmpty())
-        QMessageBox::warning(this, tr("Saved measurements"), tr("Cannot read %1:\n%2").arg(m_storePath, error));
+    if (!error.isEmpty()) {
+        // Нечитаемый файл (повреждён или от более новой версии) не затираем следующим сохранением
+        QString renameError;
+        const QString kept = baseline_store::setAside(m_storePath, &renameError);
+        const QString text =
+            kept.isEmpty() ? tr("Cannot read %1:\n%2").arg(m_storePath, error)
+                           : tr("Cannot read %1:\n%2\n\nThe file is kept as %3; new measurements go to a new file.")
+                                 .arg(m_storePath, error, kept);
+        QMessageBox::warning(this, tr("Saved measurements"), text);
+    }
     fill();
 }
 

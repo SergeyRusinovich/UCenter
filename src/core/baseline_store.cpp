@@ -2,6 +2,7 @@
 
 #include "core/format.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -123,7 +124,12 @@ QString saveJson(const QString &path, const QList<Baseline> &items)
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly))
         return file.errorString();
-    file.write(QJsonDocument(array).toJson(QJsonDocument::Indented));
+    const QJsonObject root{
+        {"format", QStringLiteral("ucenter-measurements")},
+        {"version", FormatVersion},
+        {"measurements", array},
+    };
+    file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     if (!file.commit())
         return file.errorString();
     return {};
@@ -141,11 +147,27 @@ QString loadJson(const QString &path, QList<Baseline> *items)
     const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(), &parseError);
     if (parseError.error != QJsonParseError::NoError)
         return parseError.errorString();
-    if (!doc.isArray())
+    QJsonArray array;
+    if (doc.isArray()) {
+        array = doc.array();  // версия 1: список замеров без обёртки
+    } else if (doc.isObject()) {
+        const QJsonObject root = doc.object();
+        const int version = root.value(QLatin1String("version")).toInt(0);
+        if (version > FormatVersion)
+            return QStringLiteral(
+                       "the file was written by a newer version of UCenter (format %1, this version reads up "
+                       "to %2)")
+                .arg(version)
+                .arg(FormatVersion);
+        if (version < 2 || !root.value(QLatin1String("measurements")).isArray())
+            return QStringLiteral("a list of measurements is expected");
+        array = root.value(QLatin1String("measurements")).toArray();
+    } else {
         return QStringLiteral("a list of measurements is expected");
+    }
     QList<Baseline> result;
     QString error;
-    for (const auto &v : doc.array()) {
+    for (const auto &v : std::as_const(array)) {
         if (!v.isObject())
             return QStringLiteral("a measurement must be an object");
         const QJsonObject o = v.toObject();
@@ -160,6 +182,18 @@ QString loadJson(const QString &path, QList<Baseline> *items)
     }
     *items = result;
     return {};
+}
+
+QString setAside(const QString &path, QString *error)
+{
+    QString target = path + QStringLiteral(".unreadable-")
+                     + QDateTime::currentDateTime().toString(QStringLiteral("yyyyMMdd-HHmmss"));
+    QFile file(path);
+    if (!file.rename(target)) {
+        *error = file.errorString();
+        return {};
+    }
+    return target;
 }
 
 QString moveFromLegacy(const QString &legacyPath, const QString &path)

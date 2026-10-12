@@ -745,6 +745,16 @@ may be blocked on this network — pick another one.</source>
 %2</translation>
     </message>
     <message>
+        <source>Cannot read %1:
+%2
+
+The file is kept as %3; new measurements go to a new file.</source>
+        <translation>Не удалось прочитать %1:
+%2
+
+Файл сохранён как %3; новые замеры будут записаны в новый файл.</translation>
+    </message>
+    <message>
         <source>Cannot write %1:
 %2</source>
         <translation>Не удалось записать %1:

@@ -136,7 +136,7 @@ At 250 ms the console got more expensive: its cost follows the number of refresh
 
 | # | Step | Done when | Size |
 |---|---|---|---|
-| 5.1 | A `version` field in `measurements.json` with a migration path, as foreseen in [0012](adr/0012-storage-compatibility.md); a new decision record | Old files load; new files carry the version | S |
+| 5.1 | ✅ A `version` field in `measurements.json` with a migration path, as foreseen in [0012](adr/0012-storage-compatibility.md) — [0021](adr/0021-measurements-format-version.md). An unreadable file (corrupt or from a newer version) is set aside instead of being overwritten | Old files load; new files carry the version — `test_core` (`storageFormatVersions`) | S |
 | 5.2 | Resolve the use of Google tiles before wider distribution ([0008](adr/0008-painted-tile-map.md)): remove the source, or put it behind an explicit opt-in | A decision record and the README reflect the choice | S |
 
 ## Not planned
