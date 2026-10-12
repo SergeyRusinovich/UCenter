@@ -19,22 +19,35 @@ runs:
         PACKAGES: ${{ inputs.packages }}
         CLANG_FORMAT: ${{ inputs.clang-format }}
       run: |
-        apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30"
+        apt_opts="-o Acquire::Retries=2 -o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20"
+        # Раннеры берут пакеты с azure.archive.ubuntu.com; если он подвис, повтор к нему же почти
+        # бесполезен — следующие попытки идут на другие зеркала (только источники Ubuntu)
+        mirrors="default http://archive.ubuntu.com/ubuntu/ http://mirrors.edge.kernel.org/ubuntu/"
+        use_mirror() {
+          for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list; do
+            [ -f "$f" ] && sudo sed -i -E "s#https?://[^ /]*(ubuntu\.com|kernel\.org)/ubuntu/?#$1#g" "$f"
+          done
+          return 0
+        }
         install() {
           if [ -n "$PACKAGES" ]; then
+            # Обычно ~20 с на всё: тайм-ауты короткие, чтобы зависшее зеркало быстро сменилось
             # shellcheck disable=SC2086
-            timeout 180 sudo apt-get $apt_opts update || return 1
+            timeout 90 sudo apt-get $apt_opts update || return 1
             # shellcheck disable=SC2086
-            timeout 300 sudo apt-get $apt_opts install -y $PACKAGES || return 1
+            timeout 180 sudo apt-get $apt_opts install -y $PACKAGES || return 1
           fi
           if [ "$CLANG_FORMAT" = true ]; then
             timeout 120 pip install --user --timeout 30 --retries 3 clang-format==19.1.7 || return 1
           fi
         }
-        for attempt in 1 2 3; do
+        attempt=0
+        for mirror in $mirrors; do
+          attempt=$((attempt + 1))
+          [ "$mirror" = default ] || use_mirror "$mirror"
           install && break
           [ "$attempt" = 3 ] && { echo "::error title=Install tools::package mirrors did not respond in 3 attempts"; exit 1; }
-          echo "::warning title=Install tools::attempt $attempt failed or timed out, retrying"
-          sleep 15
+          echo "::warning title=Install tools::attempt $attempt failed or timed out, switching the package mirror"
+          sleep 5
         done
         echo "$HOME/.local/bin" >> "$GITHUB_PATH"
