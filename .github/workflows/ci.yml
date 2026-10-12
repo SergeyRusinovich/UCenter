@@ -71,7 +71,9 @@ jobs:
         run: |
           if ! ctest --test-dir build --build-config Release --output-on-failure > ctest.log 2>&1; then
             cat ctest.log
-            echo "::error title=Tests failed::$(tail -c 4000 ctest.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+            # Какие именно проверки упали — из отчёта test_core в файле
+            fails="$(grep -E -A3 '^(FAIL|QFATAL)' build/test_core.txt 2>/dev/null | head -c 2000)"
+            echo "::error title=Tests failed::$( { echo "$fails"; tail -c 2000 ctest.log; } | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
             exit 1
           fi
           cat ctest.log

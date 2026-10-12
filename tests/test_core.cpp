@@ -460,7 +460,10 @@ private slots:
             x = x + std::sqrt(double(t.nsecsElapsed()));
         const double thread = cpu_time::thread() - thread0, process = cpu_time::process() - process0;
         QVERIFY2(thread > 0.05 && thread < 1.0, qPrintable(QString::number(thread)));
-        QVERIFY(process >= thread * 0.9);  // процесс — не меньше потока (с поправкой на точность часов)
+        // Процесс — не меньше потока. Счётчики Windows идут квантами по 15.6 мс и снимаются не в один
+        // момент: время процесса может отстать от времени потока на квант-другой
+        QVERIFY2(process >= thread - 0.035,
+                 qPrintable(QStringLiteral("process %1 < thread %2").arg(process).arg(thread)));
     }
 
     // ---------- Консоль ----------
