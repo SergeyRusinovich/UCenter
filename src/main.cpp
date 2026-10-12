@@ -47,7 +47,10 @@ int main(int argc, char *argv[])
     const QCommandLineOption measureOutOpt(
         QStringLiteral("measure-out"), QStringLiteral("Append the --measure result to this file (default: stderr)."),
         QStringLiteral("file"));
-    args.addOptions({replayOpt, speedOpt, quitOpt, measureOpt, measureOutOpt});
+    const QCommandLineOption tabOpt(QStringLiteral("tab"),
+                                    QStringLiteral("Open this tab on start (0 = Console ... 4 = Configuration)."),
+                                    QStringLiteral("index"));
+    args.addOptions({replayOpt, speedOpt, quitOpt, measureOpt, measureOutOpt, tabOpt});
     args.process(app);
     QElapsedTimer sinceStart;
     sinceStart.start();
@@ -68,6 +71,9 @@ int main(int argc, char *argv[])
         return win;
     };
     MainWindow *first = openWindow();
+    first->setKeepSettings(!args.isSet(tabOpt) && !args.isSet(measureOpt));
+    if (args.isSet(tabOpt))
+        first->showTab(args.value(tabOpt).toInt());
     if (args.isSet(replayOpt))
         first->startReplay(args.value(replayOpt), args.value(speedOpt).toDouble(), args.isSet(quitOpt));
     if (args.isSet(measureOpt)) {

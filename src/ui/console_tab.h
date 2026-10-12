@@ -43,4 +43,5 @@ private:
     // Сообщения копятся здесь и переходят в список одной пачкой вместо сотен вставок в секунду
     QList<GnssMessage> m_pending;
     QElapsedTimer m_lastFlush;
+    bool m_appending = false;  // строки меняет добавление, а не пользователь
 };

@@ -34,6 +34,10 @@ public:
     void startReplay(const QString &path, double speed, bool quitAtEnd);
     // Название открытой вкладки (для отчёта --measure)
     QString currentTab() const;
+    // Открыть вкладку по номеру (--tab); неверный номер не меняет вкладку
+    void showTab(int index);
+    // Замеры из командной строки не должны менять сохранённые размер окна и вкладку
+    void setKeepSettings(bool keep) { m_keepSettings = keep; }
 
 signals:
     // Пользователь выбрал язык; окно пересоздаёт владелец
@@ -59,6 +63,7 @@ private:
     SatelliteTracker m_tracker;
     bool m_navDirty = false;
     bool m_errorShown = false;
+    bool m_keepSettings = true;
 
     ConnectionPanel *m_connection;
     ConsoleTab *m_consoleTab;

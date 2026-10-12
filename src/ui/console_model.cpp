@@ -12,7 +12,8 @@ int ConsoleModel::rowCount(const QModelIndex &parent) const
 
 QVariant ConsoleModel::data(const QModelIndex &index, int role) const
 {
-    if (role != Qt::DisplayRole || !index.isValid() || index.row() >= m_log.rowCount())
+    // Подсказка — та же строка целиком: длинные UBX в списке обрезаны многоточием
+    if ((role != Qt::DisplayRole && role != Qt::ToolTipRole) || !index.isValid() || index.row() >= m_log.rowCount())
         return {};
     return messages::messageText(m_log.row(index.row()));
 }
