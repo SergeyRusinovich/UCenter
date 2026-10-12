@@ -118,6 +118,23 @@ The version comes from git: a tag `v1.2.3` gives `1.2.3`, commits after the tag 
 
 To release, push a tag `v1.2.3` from `main`: CI builds and tests the macOS and Windows packages and creates a draft GitHub release with the `.dmg` and `.zip` attached, which is published by hand after a check.
 
+### Signing and notarization on macOS
+
+By default the app is signed ad hoc: enough for location access on the Mac that built it, but other Macs show a Gatekeeper warning. With a Developer ID certificate in the keychain, the package can be signed and notarized so that it opens anywhere ([ADR 0019](docs/adr/0019-developer-id-signing.md)):
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+      -DUCENTER_CODESIGN_IDENTITY="Developer ID Application: Sergei Rusinovich (D966UR5B6V)"
+cmake --build build --parallel
+cpack --config build/CPackConfig.cmake -B build/package      # signs the app (hardened runtime) and the .dmg
+
+# Once: store the notarization credentials in the keychain (password from appleid.apple.com → App-Specific Passwords)
+xcrun notarytool store-credentials UCenter --apple-id <Apple ID> --team-id D966UR5B6V
+tools/notarize.sh build/package/UCenter-*.dmg                # submits, waits, staples, checks Gatekeeper
+```
+
+In CI, `v*` tags are signed and notarized when the repository has these secrets: `MACOS_CERT_P12` (the Developer ID certificate with its private key, exported from Keychain Access as `.p12`, base64-encoded), `MACOS_CERT_PASSWORD`, `NOTARY_APPLE_ID`, `NOTARY_PASSWORD` (an app-specific password) and `NOTARY_TEAM_ID`. Without them CI signs ad hoc.
+
 ### Computer location on macOS
 
 macOS gives location only to an app bundle whose `Info.plist` declares why it needs it. The build produces such a bundle (`build/UCenter.app`, with `NSLocationUsageDescription` from [cmake/Info.plist.in](cmake/Info.plist.in)) and signs it ad hoc, so macOS can remember the permission.
@@ -206,7 +223,7 @@ The code is split into a GUI-independent core and a thin UI layer. Dependencies 
 
 ```
 CMakeLists.txt               Build: ucenter_core, UCenter (app bundle), tests, fuzzer, install/CPack
-cmake/                       Info.plist template, version from git
+cmake/                       Info.plist template, version from git, macOS signing and entitlements
 resources/                   App icon (SVG source, png, ico, icns) and the Windows resource file
 translations/                ucenter_<language>.ts — translations (ru, es, zh_CN)
 docs/adr/                    Architecture Decision Records
@@ -214,7 +231,7 @@ docs/roadmap.md              Planned improvements and optimizations
 tests/                       test_core (core logic), test_session (port via a pseudo-terminal),
                              bench_core and the reference recording generator
 fuzz/                        libFuzzer target for the frame reader and its seed corpus
-tools/                       format.sh, clang_tidy.sh, render_icons/
+tools/                       format.sh, clang_tidy.sh, notarize.sh, render_icons/
 src/
   main.cpp                   Entry point: language, icon, theme; reopens the window when the language changes
   core/                      No widgets; QtCore (thread, signals, timer), QtSerialPort and QtPositioning only

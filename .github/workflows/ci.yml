@@ -19,10 +19,35 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-14, windows-2022]
+    env:
+      # Подпись Developer ID и нотаризация на macOS (ADR 0019) — только если заданы секреты репозитория;
+      # без них пакет подписывается ad hoc, как раньше
+      MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # теги нужны для номера версии (cmake/version.cmake)
+
+      - name: Import the Developer ID certificate (macOS)
+        if: runner.os == 'macOS' && env.MACOS_CERT_P12 != ''
+        env:
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          # Временная связка ключей только для этой задачи; codesign получает доступ к ключу без диалога
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -k "$keychain" -P "$MACOS_CERT_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$password" "$keychain" > /dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          identity="$(security find-identity -v -p codesigning "$keychain" | grep -o '"Developer ID Application: [^"]*"' | head -1 | tr -d '"')"
+          [ -n "$identity" ] || { echo "::error title=Signing::no Developer ID Application identity in MACOS_CERT_P12"; exit 1; }
+          echo "UCENTER_CODESIGN_IDENTITY=$identity" >> "$GITHUB_ENV"
 
       - uses: jurplel/install-qt-action@v4
         with:
@@ -35,6 +60,7 @@ jobs:
         run: >
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
           -DUCENTER_WERROR=${{ runner.os == 'Windows' && 'OFF' || 'ON' }}
+          -DUCENTER_CODESIGN_IDENTITY="${{ env.UCENTER_CODESIGN_IDENTITY || '-' }}"
 
       - name: Build
         run: cmake --build build --config Release --parallel
@@ -64,6 +90,19 @@ jobs:
 
       - name: Package
         run: cpack --config build/CPackConfig.cmake -C Release -B build/package
+
+      - name: Notarize (macOS, tags)
+        # Только для релизов: нотаризация занимает минуты, а пакеты веток никто не раздаёт
+        if: runner.os == 'macOS' && startsWith(github.ref, 'refs/tags/v') && env.UCENTER_CODESIGN_IDENTITY != '' && env.NOTARY_PASSWORD != ''
+        env:
+          NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+          NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+        run: |
+          dmg="$(ls build/package/*.dmg)"
+          xcrun notarytool submit "$dmg" --apple-id "$NOTARY_APPLE_ID" --team-id "$NOTARY_TEAM_ID" \
+            --password "$NOTARY_PASSWORD" --wait --timeout 30m
+          xcrun stapler staple "$dmg"
+          spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg"
 
       - uses: actions/upload-artifact@v7
         with:
