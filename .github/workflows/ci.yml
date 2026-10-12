@@ -144,31 +144,23 @@ jobs:
     env:
       CC: clang
       CXX: clang++
-      CCACHE_DIR: ${{ github.workspace }}/.ccache
-      CCACHE_MAXSIZE: 500M
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/linux-tools
         with:
           # clang-tidy 19 — как у разработчиков: в версии 18 другой набор проверок
-          packages: clang clang-tidy-19 ccache libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
+          packages: clang clang-tidy-19 libgl1-mesa-dev libxkbcommon-dev libfontconfig1-dev
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           modules: ${{ env.QT_MODULES }}
           cache: true
-      - uses: actions/cache@v6
-        with:
-          path: .ccache
-          key: ccache-tidy-${{ github.sha }}
-          restore-keys: ccache-tidy-
-
-      # Сборка нужна ради сгенерированных moc-файлов, которые включают исходники
-      - name: Build
+      # Компилировать не нужно: clang-tidy нужны только compile_commands.json и файлы moc,
+      # которые включают исходники, — их создают цели *_autogen
+      - name: Generate moc files
         run: |
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build build --parallel && ccache --show-stats
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build --parallel --target $(cmake --build build --target help | grep -o '[A-Za-z_]*_autogen' | sort -u)
 
       - name: clang-tidy
         env:
