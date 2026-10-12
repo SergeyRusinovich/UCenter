@@ -45,17 +45,21 @@ jobs:
         env:
           QT_FORCE_STDERR_LOGGING: '1'
         run: |
+          $diag = @()
           & build/Release/make_recording.exe reference.ubx
-          "make_recording exit code: $LASTEXITCODE"
-          $rec = (Resolve-Path reference.ubx).Path
-          "recording: $rec, $((Get-Item $rec).Length) bytes"
+          $diag += "make_recording exit code: $LASTEXITCODE"
+          $rec = (Resolve-Path reference.ubx -ErrorAction SilentlyContinue).Path
+          if ($rec) { $diag += "recording: $rec, $((Get-Item $rec).Length) bytes" } else { $diag += 'no recording'; $rec = 'reference.ubx' }
           foreach ($tab in 0, 1, 2) {
             # Приложение с GUI-подсистемой: ждём его завершения явно; журнал Qt — в файл
             $p = Start-Process -Wait -PassThru -FilePath build/Release/UCenter.exe -RedirectStandardError "qt-$tab.log" `
               -ArgumentList '--replay', "`"$rec`"", '--tab', $tab, '--measure', '20,80', '--measure-out', 'load.txt'
-            "tab $tab exit code: $($p.ExitCode)"
-            Get-Content "qt-$tab.log" -TotalCount 20
+            $diag += "tab $tab exit code: $($p.ExitCode)"
+            $diag += Get-Content "qt-$tab.log" -TotalCount 8 -ErrorAction SilentlyContinue
           }
+          # Логи шагов видны только с доступом к репозиторию — диагностику выводим аннотацией
+          $text = ($diag -join '%0A') -replace '::', ':'
+          Write-Output "::notice title=Windows measure diagnostics::$text"
           Get-Content load.txt
 
       - name: Measure (macOS)
