@@ -42,12 +42,19 @@ jobs:
       - name: Measure (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          QT_FORCE_STDERR_LOGGING: '1'
         run: |
           & build/Release/make_recording.exe reference.ubx
+          "make_recording exit code: $LASTEXITCODE"
+          $rec = (Resolve-Path reference.ubx).Path
+          "recording: $rec, $((Get-Item $rec).Length) bytes"
           foreach ($tab in 0, 1, 2) {
-            # Приложение с GUI-подсистемой: ждём его завершения явно
-            Start-Process -Wait -FilePath build/Release/UCenter.exe `
-              -ArgumentList '--replay', 'reference.ubx', '--tab', $tab, '--measure', '20,80', '--measure-out', 'load.txt'
+            # Приложение с GUI-подсистемой: ждём его завершения явно; журнал Qt — в файл
+            $p = Start-Process -Wait -PassThru -FilePath build/Release/UCenter.exe -RedirectStandardError "qt-$tab.log" `
+              -ArgumentList '--replay', "`"$rec`"", '--tab', $tab, '--measure', '20,80', '--measure-out', 'load.txt'
+            "tab $tab exit code: $($p.ExitCode)"
+            Get-Content "qt-$tab.log" -TotalCount 20
           }
           Get-Content load.txt
 
