@@ -1,6 +1,6 @@
 # 0008. Tile map drawn with `QPainter`
 
-- **Status:** Accepted
+- **Status:** Accepted; Google imagery made opt-in by [0022](0022-google-imagery-opt-in.md)
 - **Date:** 2026-10-11
 
 ## Context
@@ -26,4 +26,4 @@ The map is a plain `QWidget` (`MapView`) that projects Web Mercator itself and d
 
 - Full control over interaction (drag of markers and the flag, zoom around the cursor, trackpad handling) and over request policy.
 - The map is small and dependency-free, but features like vector tiles or rotation would have to be written by hand.
-- Google tiles are fetched directly, which their terms do not allow for public use; the README says so.
+- Google tiles are fetched directly, which their terms do not allow for public use; since [0022](0022-google-imagery-opt-in.md) they are shown only after the user accepts those terms.

@@ -11,7 +11,7 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0005 | [Receiver I/O in a reader thread behind `ReceiverSource`](0005-reader-thread-and-sources.md) | Accepted |
 | 0006 | [Decode every frame once into a `std::variant`](0006-decode-once.md)          | Accepted |
 | 0007 | [UBX messages take priority over NMEA](0007-ubx-over-nmea.md)                 | Accepted |
-| 0008 | [Tile map drawn with `QPainter`](0008-painted-tile-map.md)                    | Accepted |
+| 0008 | [Tile map drawn with `QPainter`](0008-painted-tile-map.md)                    | Accepted, amended by 0022 |
 | 0009 | [Recordings are the raw byte stream; replay is paced by epoch time](0009-recording-and-replay.md) | Accepted |
 | 0010 | [Localization with Qt Linguist; language switch recreates the window](0010-localization.md) | Accepted, partly superseded by 0015 |
 | 0011 | [A signed app bundle on macOS for location access](0011-macos-bundle.md)       | Accepted, extended by 0019 |
@@ -25,6 +25,7 @@ Each record describes one architectural decision of UCenter: the context it was 
 | 0019 | [macOS packages are signed with a Developer ID and notarized; ad hoc signing stays the default](0019-developer-id-signing.md) | Accepted |
 | 0020 | [Windows packages: an MSI installer built by CPack WiX, next to the ZIP](0020-windows-msi-installer.md) | Accepted |
 | 0021 | [measurements.json carries a format version; unreadable files are set aside, not overwritten](0021-measurements-format-version.md) | Accepted |
+| 0022 | [Google satellite imagery is shown only after the user accepts its terms](0022-google-imagery-opt-in.md) | Accepted |
 
 ## Writing a new record
 

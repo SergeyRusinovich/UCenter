@@ -76,7 +76,7 @@ Measures a baseline from point A to point B on the WGS84 ellipsoid (Vincenty inv
 - **→ A** / **→ B** put point A or B on the flag.
 
 **Map**
-- Imagery provider: Esri World Imagery, Google satellite or OpenStreetMap; the choice is remembered, as are the map position, zoom and the split between the map and the table.
+- Imagery provider: Esri World Imagery (default), OpenStreetMap or Google satellite — the last only after accepting Google's terms (personal use only); the choice is remembered, as are the map position, zoom and the split between the map and the table.
 - The mouse wheel and the trackpad zoom around the cursor; horizontal scrolling does not change the zoom. On Retina screens satellite imagery is drawn from the next zoom level, at full screen resolution.
 - The expand button shows the map over the whole window while the saved measurements stay visible below; the result and **Save** move onto the map. Esc or the same button returns to the normal view.
 
@@ -345,7 +345,7 @@ AzimuthTab --expandChanged--> MainWindow (hides the connection panel)
 - `UBX-NAV-PVT`, when present, is the primary source for position, time, fix type, PDOP and satellite count; NMEA GGA/GSA/RMC are used only when NAV-PVT has not been received for 2 seconds. HDOP comes from GGA or `UBX-NAV-DOP`.
 - `UBX-NAV-SAT`, when present, is the source for satellites: each message is the full list of the epoch with an explicit "used" flag. Without it satellites come from NMEA: "used in navigation" from GSA, SBAS recognized by PRN ranges 33–64 and 120–158 under the GP talker. Satellites that stop appearing for 5 seconds are removed. If a satellite is reported on several signals (NMEA 4.10+ `signalID`), the best C/N0 of the current epoch is shown; a signal with an empty C/N0 counts as not tracked.
 - Map tiles are requested from the center of the view outwards; requests for tiles that left the view are cancelled. While a tile loads, the nearest cached lower-zoom tile is drawn stretched in its place. Tiles are cached in memory and on disk (OS cache directory, up to 200 MB). A tile that fails to load is retried after 10 s, then with a doubling delay up to 5 minutes, to respect the OpenStreetMap tile usage policy.
-- Esri imagery is blocked on some networks (HTTP 403); pick another provider on the Azimuth tab then. Google satellite tiles are fetched directly, which Google Maps Platform terms do not allow — use it for personal/internal work only.
+- Esri imagery is blocked on some networks (HTTP 403); pick another provider on the Azimuth tab then. Google satellite tiles are fetched directly, which Google Maps Platform terms do not allow for distributed apps: the app shows them only after you accept that they are for personal, non-commercial use, at your own responsibility ([ADR 0022](docs/adr/0022-google-imagery-opt-in.md)).
 - Place search follows the Nominatim usage policy: a request only on Enter (no autocomplete), at most one per second, with a descriptive User-Agent.
 
 ## Limitations

@@ -404,18 +404,30 @@ Rate, constellations and message output return to their default values.</source>
         <translation>Спутник — Esri</translation>
     </message>
     <message>
-        <source>Satellite — Google</source>
-        <translation>Спутник — Google</translation>
-    </message>
-    <message>
         <source>Map — OpenStreetMap</source>
         <translation>Схема — OpenStreetMap</translation>
+    </message>
+    <message>
+        <source>Satellite — Google (personal use)</source>
+        <translation>Спутник — Google (только для личного использования)</translation>
     </message>
     <message>
         <source>Imagery provider. If tiles stay empty, the provider
 may be blocked on this network — pick another one.</source>
         <translation>Источник подложки. Если тайлы не появляются, источник
 может быть заблокирован в этой сети — выберите другой.</translation>
+    </message>
+    <message>
+        <source>Google satellite imagery</source>
+        <translation>Спутниковые снимки Google</translation>
+    </message>
+    <message>
+        <source>Google&apos;s terms allow this imagery only for personal, non-commercial use and do not allow apps to load the tiles directly.
+
+Use it only when other imagery does not load, at your own responsibility. Show Google imagery?</source>
+        <translation>Условия Google разрешают эти снимки только для личного некоммерческого использования и не разрешают приложениям загружать тайлы напрямую.
+
+Используйте их, только если другие подложки не загружаются, под свою ответственность. Показать снимки Google?</translation>
     </message>
 </context>
 <context>
