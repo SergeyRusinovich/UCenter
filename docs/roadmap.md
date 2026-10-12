@@ -88,7 +88,7 @@ The map also looks better: with the origin on device pixels, the thin seams betw
 | 3.1 | ✅ Console as a model and view: `MessageLog` in the core (ring buffer of 50 000 messages, NMEA/UBX filter over the whole history), `ConsoleModel` + `QListView` with uniform rows, text built only for visible rows; copy, full line as a tooltip; a selected line stays in place while the history grows and is kept in the details when it is evicted; Esc follows new lines again | Filter switching with a full history: **0.22 ms** (`bench_core`, `consoleFilterSwitch`) — **met**. History raised from 5 000 to 50 000 with **no measurable memory growth** (291 MB vs 293 MB after two minutes at 4×) — **met**. Console at 1× no slower than after 2.3: **8.7 % vs 8.6 %** — **met** | M |
 | 3.2 | ✅ Console details: selecting a row shows the fields of the message — named NMEA fields, decoded UBX fields, the frame in hex (`messages::details`) | `test_core` (`messageDetailsForEveryType`) covers every type in `message_types.h` — **met** | M |
 | 3.3 | ◐ Measure on Windows. `--measure 20,80 --measure-out load.txt` (with `--tab N`) reports the GUI-thread and process load and whether the window was visible, on every platform; the **Measure** workflow runs it on GitHub's Windows and macOS runners | On the Windows runner the app replays the stream and processing costs **0.0–0.1 %**, but the runner has no screen, so the window is not painted and painting cannot be measured there (the macOS runner likewise shows Dashboard at 2 % instead of 7.5 %). **A run on a real Windows computer is still needed** for the table | S |
-| 3.4 | ✅ Compass repaints only when the heading or course changes by at least 0.5° | Dashboard GUI thread at 1× under 5 % — **not met: 7.5 %** (7.7 % before). The rest is the value labels and the map, not the compass | S |
+| 3.4 | ✅ Compass repaints only when the heading or course changes by at least 0.5°; afterwards `ValueLabel` became opaque (it fills the card colour itself, so the widgets under it are not repainted) and the Dashboard and console share one 300 ms refresh timer instead of 100 ms | Dashboard GUI thread at 1× under 5 % — **at the boundary: 5.0–5.1 %** (7.5 % before; two runs). The widgets themselves cost almost nothing; what remains is the fixed price of a window repaint cycle | S |
 
 ### Phase 3 results
 
@@ -108,6 +108,19 @@ Two lessons from measuring, now built into `--measure`:
 
 - macOS neither paints nor runs the timers of a covered window at full rate, so a covered window looks cheap. `--measure` raises the window and reports `visible=…%`; runs below 100 % are discarded.
 - Qt 6 closes the windows on quit, which used to save the window size and tab of every measured run into the user's settings. Runs with `--tab` or `--measure` no longer save them.
+
+### Dashboard follow-up
+
+Measured after phase 3 with `--measure 20,80`, the window visible; repeated runs of the same build differ by up to about 1 %.
+
+| Change | Dashboard 1× | Dashboard 4× | Console 1× |
+|---|---|---|---|
+| After phase 3 | 7.5 % | 13.3 % | 8.7 % |
+| `ValueLabel` opaque | 6.3–6.4 % | — | — |
+| + one refresh timer, 250 ms | 5.3 % | 5.9 % | 9.9 % |
+| + one refresh timer, **300 ms** (kept) | **5.0–5.1 %** | — | **8.5–8.6 %** |
+
+At 250 ms the console got more expensive: its cost follows the number of refreshes, and the old 250 ms limit on a 100 ms timer had in fact refreshed it every 300 ms.
 
 ## Phase 4 — CI and delivery
 

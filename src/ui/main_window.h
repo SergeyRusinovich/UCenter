@@ -21,7 +21,9 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    static constexpr int UiIntervalMs = 100;  // не чаще 10 перерисовок Dashboard/консоли в секунду
+    // Dashboard и консоль обновляются ~3 раза в секунду: чаще цифры всё равно не прочитать, а каждый
+    // цикл перерисовки окна стоит заметно дороже самих данных (docs/roadmap.md, фазы 2–3)
+    static constexpr int UiIntervalMs = 300;
     static constexpr int SatIntervalMs = 1000;
     static constexpr int StatusMs = 5000;
 

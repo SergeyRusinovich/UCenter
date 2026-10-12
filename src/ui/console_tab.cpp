@@ -134,9 +134,8 @@ void ConsoleTab::appendMessage(const GnssMessage &msg)
 
 void ConsoleTab::flush()
 {
-    if (m_pending.isEmpty() || (m_lastFlush.isValid() && m_lastFlush.elapsed() < FlushIntervalMs))
+    if (m_pending.isEmpty())
         return;
-    m_lastFlush.start();
     // Список едет за новыми строками, пока он прокручен до конца и в нём ничего не выбрано:
     // выбранная строка не должна уезжать, пока читают её поля
     const QScrollBar *bar = m_view->verticalScrollBar();
